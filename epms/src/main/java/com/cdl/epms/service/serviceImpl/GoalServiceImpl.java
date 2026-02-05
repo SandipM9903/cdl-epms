@@ -36,19 +36,28 @@ public class GoalServiceImpl implements GoalService {
             throw new BusinessException("Quarter is required");
         }
 
-        if (goal.getEmployeeId() == null || goal.getEmployeeId().isEmpty()) {
+        if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
             throw new BusinessException("Employee ID is required");
         }
 
-        if (goal.getManagerId() == null || goal.getManagerId().isEmpty()) {
+        if (goal.getManagerId() == null || goal.getManagerId().trim().isEmpty()) {
             throw new BusinessException("Manager ID is required");
+        }
+
+        if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
+            throw new BusinessException("Goal title is required");
         }
 
         if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
             throw new BusinessException("Weightage must be greater than 0");
         }
 
-        long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(goal.getEmployeeId(), activeCycle, quarter, GoalType.PREDEFINED);
+        long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                goal.getEmployeeId(),
+                activeCycle,
+                quarter,
+                GoalType.PREDEFINED
+        );
 
         if (count >= 5) {
             throw new BusinessException("Maximum 5 predefined goals allowed");
@@ -57,6 +66,7 @@ public class GoalServiceImpl implements GoalService {
         goal.setPerformanceCycle(activeCycle);
         goal.setQuarter(quarter);
         goal.setGoalType(GoalType.PREDEFINED);
+        goal.setStatus(GoalStatus.DRAFT);
 
         return goalRepository.save(goal);
     }
@@ -81,11 +91,12 @@ public class GoalServiceImpl implements GoalService {
         PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
 
-        return goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarter(
+        return goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 managerId,
                 employeeId,
                 activeCycle,
-                quarter
+                quarter,
+                GoalType.PREDEFINED
         );
     }
 
@@ -119,7 +130,99 @@ public class GoalServiceImpl implements GoalService {
             throw new BusinessException("Total weightage must be 100%");
         }
 
-        // Submit all goals
+        for (Goal goal : goals) {
+            goal.setStatus(GoalStatus.SUBMITTED);
+        }
+
+        goalRepository.saveAll(goals);
+    }
+
+    // ================= SMART GOALS (EMPLOYEE) =================
+
+    @Override
+    public Goal saveSmartGoal(Goal goal, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        if (quarter == null) {
+            throw new BusinessException("Quarter is required");
+        }
+
+        if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
+            throw new BusinessException("Goal title is required");
+        }
+
+        if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
+            throw new BusinessException("Weightage must be greater than 0");
+        }
+
+        long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                goal.getEmployeeId(),
+                activeCycle,
+                quarter,
+                GoalType.SMART
+        );
+
+        if (count >= 5) {
+            throw new BusinessException("Maximum 5 SMART goals allowed");
+        }
+
+        goal.setPerformanceCycle(activeCycle);
+        goal.setQuarter(quarter);
+        goal.setGoalType(GoalType.SMART);
+        goal.setStatus(GoalStatus.DRAFT);
+
+        return goalRepository.save(goal);
+    }
+
+    @Override
+    public List<Goal> getSmartGoalsByEmployee(String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        return goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                employeeId,
+                activeCycle,
+                quarter,
+                GoalType.SMART
+        );
+    }
+
+    @Override
+    public void submitSmartGoals(String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                employeeId,
+                activeCycle,
+                quarter,
+                GoalType.SMART
+        );
+
+        if (goals.isEmpty()) {
+            throw new BusinessException("No SMART goals found to submit");
+        }
+
+        if (goals.size() > 5) {
+            throw new BusinessException("Maximum 5 SMART goals allowed");
+        }
+
+        int totalWeightage = goals.stream()
+                .mapToInt(Goal::getWeightage)
+                .sum();
+
+        if (totalWeightage != 100) {
+            throw new BusinessException("Total weightage must be 100%");
+        }
+
         for (Goal goal : goals) {
             goal.setStatus(GoalStatus.SUBMITTED);
         }

@@ -69,3 +69,9 @@ Changes status from DRAFT → SUBMITTED
 Key Rule Note
 
 For every quarter, total goal weightage must be 100%.
+
+====================================================================================
+
+POST :  http://localhost:9010/api/goals/smart/Q1
+GET    :  http://localhost:9010/api/goals/smart/employee/EMP101/Q1
+PUT    :  http://localhost:9010/api/goals/smart/submit/EMP101/Q1

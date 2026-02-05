@@ -14,4 +14,10 @@ public interface GoalService {
     List<Goal> getPredefinedGoalsByManager(String managerId, String employeeId, Quarter quarter);
 
     void submitPredefinedGoals(String managerId, String employeeId, Quarter quarter);
+
+    Goal saveSmartGoal(Goal goal, Quarter quarter);
+
+    List<Goal> getSmartGoalsByEmployee(String employeeId, Quarter quarter);
+
+    void submitSmartGoals(String employeeId, Quarter quarter);
 }
