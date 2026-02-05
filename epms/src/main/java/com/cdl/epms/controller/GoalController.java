@@ -23,7 +23,7 @@ public class GoalController {
 
     @PostMapping("/predefined/{quarter}")
     public ResponseEntity<Goal> savePredefinedGoal(@PathVariable("quarter") Quarter quarter, @Valid @RequestBody Goal goal) {
-        Goal saved = goalService.savePredefinedGoal(goal, quarter);
+        Goal saved  = goalService.savePredefinedGoal(goal, quarter);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
