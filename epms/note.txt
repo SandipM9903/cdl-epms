@@ -1,0 +1,71 @@
+POST : http://localhost:9010/api/cycles
+PUT	 : http://localhost:9010/api/cycles/1/publish
+GET  : {{baseURL}}/api/cycles/active
+PUT  : {{baseURL}}/api/cycles/1/close
+
+POST : http://localhost:9010/api/goals/predefined/Q1
+GET  : http://localhost:9010/api/goals/predefined/employee/EMP101/Q1
+GET  : http://localhost:9010/api/goals/predefined/manager/MGR001/EMP101/Q1
+PUT  : http://localhost:9010/api/goals/predefined/submit/MGR001/EMP101/Q1
+
+============================================================================================
+
+Performance Cycle APIs
+1. POST /api/cycles
+
+Purpose: Create a new Performance Cycle (Quarterly/Annual) in DRAFT mode.
+Why needed: HR prepares the cycle before launching PMS.
+Helps: Defines year, quarter, start date, end date for PMS activities.
+
+2. PUT /api/cycles/{id}/publish
+
+Purpose: Publish the cycle and make it ACTIVE.
+Why needed: PMS should start only when HR launches it.
+Helps: Employees and Managers can start goal setting only after publish.
+
+3. GET /api/cycles/active
+
+Purpose: Fetch the currently active (PUBLISHED) cycle.
+Why needed: System must know which quarter/year is running.
+Helps: Used in Goal module, Review module, Reports to work only on active cycle.
+
+4. PUT /api/cycles/{id}/close
+
+Purpose: Close the active cycle and lock the PMS period.
+Why needed: After quarter ends, no one should modify goals/reviews.
+Helps: Prevents changes after cycle completion and keeps data consistent.
+
+Predefined Goals APIs (Manager R1)
+5. POST /api/goals/predefined/{quarter}
+
+Purpose: Manager (R1) adds predefined goals for an employee.
+Why needed: Employees should get predefined goals from manager as guidance.
+Helps: Builds goal plan for the quarter before employee final submission.
+
+6. GET /api/goals/predefined/employee/{employeeId}/{quarter}
+
+Purpose: Fetch predefined goals for employee view.
+Why needed: Employee needs to see manager’s predefined goals.
+Helps: Employee can accept/modify and create SMART goals based on it.
+
+7. GET /api/goals/predefined/manager/{managerId}/{employeeId}/{quarter}
+
+Purpose: Manager fetches predefined goals created for a specific employee.
+Why needed: Manager should view/edit before final submit.
+Helps: Shows manager’s saved goals in “My Team” screen.
+
+8. PUT /api/goals/predefined/submit/{managerId}/{employeeId}/{quarter}
+
+Purpose: Manager submits predefined goals to employee.
+Why needed: Final submission ensures goals are confirmed and visible to employee.
+Helps: Validates rules like:
+
+Max 5 goals
+
+Total weightage must be 100%
+
+Changes status from DRAFT → SUBMITTED
+
+Key Rule Note
+
+For every quarter, total goal weightage must be 100%.
