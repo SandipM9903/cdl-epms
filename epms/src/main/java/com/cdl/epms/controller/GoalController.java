@@ -82,4 +82,32 @@ public class GoalController {
         goalService.submitSmartGoals(employeeId, quarter);
         return ResponseEntity.ok("SMART goals submitted successfully");
     }
+
+    // ================= DEVELOPMENT GOALS (EMPLOYEE) =================
+
+    @PostMapping("/development/{quarter}")
+    public ResponseEntity<Goal> saveDevelopmentGoal(
+            @PathVariable("quarter") Quarter quarter,
+            @Valid @RequestBody Goal goal
+    ) {
+        Goal saved = goalService.saveDevelopmentGoal(goal, quarter);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @GetMapping("/development/employee/{employeeId}/{quarter}")
+    public ResponseEntity<List<Goal>> getDevelopmentGoalsByEmployee(
+            @PathVariable("employeeId") String employeeId,
+            @PathVariable("quarter") Quarter quarter
+    ) {
+        return ResponseEntity.ok(goalService.getDevelopmentGoalsByEmployee(employeeId, quarter));
+    }
+
+    @PutMapping("/development/submit/{employeeId}/{quarter}")
+    public ResponseEntity<String> submitDevelopmentGoals(
+            @PathVariable("employeeId") String employeeId,
+            @PathVariable("quarter") Quarter quarter
+    ) {
+        goalService.submitDevelopmentGoals(employeeId, quarter);
+        return ResponseEntity.ok("Development goals submitted successfully");
+    }
 }

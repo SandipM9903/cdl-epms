@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface GoalRepository extends JpaRepository<Goal, Long> {
 
+    // ================= PREDEFINED =================
     List<Goal> findByEmployeeIdAndPerformanceCycleAndQuarter(String employeeId, PerformanceCycle performanceCycle, Quarter quarter);
 
     List<Goal> findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarter(String managerId, String employeeId, PerformanceCycle performanceCycle, Quarter quarter);
@@ -21,4 +22,13 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(String managerId, String employeeId, PerformanceCycle performanceCycle, Quarter quarter, GoalType goalType);
 
     long countByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(String managerId, String employeeId, PerformanceCycle performanceCycle, Quarter quarter, GoalType goalType);
+
+    // ================= DEVELOPMENT GOALS =================
+    List<Goal> findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalTypeAndStatus(
+            String employeeId,
+            PerformanceCycle performanceCycle,
+            Quarter quarter,
+            GoalType goalType,
+            com.cdl.epms.common.enums.GoalStatus status
+    );
 }

@@ -20,4 +20,12 @@ public interface GoalService {
     List<Goal> getSmartGoalsByEmployee(String employeeId, Quarter quarter);
 
     void submitSmartGoals(String employeeId, Quarter quarter);
+
+    // ================= DEVELOPMENT GOALS =================
+
+    Goal saveDevelopmentGoal(Goal goal, Quarter quarter);
+
+    List<Goal> getDevelopmentGoalsByEmployee(String employeeId, Quarter quarter);
+
+    void submitDevelopmentGoals(String employeeId, Quarter quarter);
 }

@@ -1,77 +1,366 @@
-POST : http://localhost:9010/api/cycles
-PUT	 : http://localhost:9010/api/cycles/1/publish
-GET  : {{baseURL}}/api/cycles/active
-PUT  : {{baseURL}}/api/cycles/1/close
+✅ CYCLE APIs
+1) POST : http://localhost:9010/api/cycles
+Why we created this API?
 
-POST : http://localhost:9010/api/goals/predefined/Q1
-GET  : http://localhost:9010/api/goals/predefined/employee/EMP101/Q1
-GET  : http://localhost:9010/api/goals/predefined/manager/MGR001/EMP101/Q1
-PUT  : http://localhost:9010/api/goals/predefined/submit/MGR001/EMP101/Q1
+To allow HR/Admin to create a new performance cycle (Quarterly / Annual) with year, startDate, endDate.
 
-============================================================================================
+How it helps?
 
-Performance Cycle APIs
-1. POST /api/cycles
+It stores cycle details in DB so later we can publish and start PMS process.
 
-Purpose: Create a new Performance Cycle (Quarterly/Annual) in DRAFT mode.
-Why needed: HR prepares the cycle before launching PMS.
-Helps: Defines year, quarter, start date, end date for PMS activities.
+Requirement mentioned in PPT?
 
-2. PUT /api/cycles/{id}/publish
+✅ Yes
 
-Purpose: Publish the cycle and make it ACTIVE.
-Why needed: PMS should start only when HR launches it.
-Helps: Employees and Managers can start goal setting only after publish.
+PPT Requirement (Copy)
 
-3. GET /api/cycles/active
+“Configure the frequency of the Performance Cycle”
+“Cycle Frequency will be - Quarterly Annual” 
 
-Purpose: Fetch the currently active (PUBLISHED) cycle.
-Why needed: System must know which quarter/year is running.
-Helps: Used in Goal module, Review module, Reports to work only on active cycle.
+PMS_REQUIREMENT_Jan 26
 
-4. PUT /api/cycles/{id}/close
+==========================================================================================================
 
-Purpose: Close the active cycle and lock the PMS period.
-Why needed: After quarter ends, no one should modify goals/reviews.
-Helps: Prevents changes after cycle completion and keeps data consistent.
+2) PUT : http://localhost:9010/api/cycles/1/publish
+Why we created this API?
 
-Predefined Goals APIs (Manager R1)
-5. POST /api/goals/predefined/{quarter}
+To make the created cycle ACTIVE (Published).
 
-Purpose: Manager (R1) adds predefined goals for an employee.
-Why needed: Employees should get predefined goals from manager as guidance.
-Helps: Builds goal plan for the quarter before employee final submission.
+How it helps?
 
-6. GET /api/goals/predefined/employee/{employeeId}/{quarter}
+Once published:
 
-Purpose: Fetch predefined goals for employee view.
-Why needed: Employee needs to see manager’s predefined goals.
-Helps: Employee can accept/modify and create SMART goals based on it.
+Users can start goal setting
 
-7. GET /api/goals/predefined/manager/{managerId}/{employeeId}/{quarter}
+PMS officially begins
 
-Purpose: Manager fetches predefined goals created for a specific employee.
-Why needed: Manager should view/edit before final submit.
-Helps: Shows manager’s saved goals in “My Team” screen.
+Requirement mentioned in PPT?
 
-8. PUT /api/goals/predefined/submit/{managerId}/{employeeId}/{quarter}
+✅ Yes
 
-Purpose: Manager submits predefined goals to employee.
-Why needed: Final submission ensures goals are confirmed and visible to employee.
-Helps: Validates rules like:
+PPT Requirement (Copy)
 
-Max 5 goals
+“Launch the Performance Cycle” 
 
-Total weightage must be 100%
+PMS_REQUIREMENT_Jan 26
 
-Changes status from DRAFT → SUBMITTED
 
-Key Rule Note
+“Once the HR publishes the e-mailer the User will receive notification…” 
 
-For every quarter, total goal weightage must be 100%.
+PMS_REQUIREMENT_Jan 26
 
-====================================================================================
+==========================================================================================================
 
-POST :  http://localhost:9010/api/goals/smart/Q1
-GET    :  http://localhost:9010/api/goals/smart/employee/EMP101/Q1
-PUT    :  http://localhost:9010/api/goals/smart/submit/EMP101/Q1
+3) GET : {{baseURL}}/api/cycles/active
+Why we created this API?
+
+To fetch the currently active quarter/cycle.
+
+How it helps?
+
+The system always needs to know:
+
+which quarter is running
+
+which cycle is open for goal setting
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Please Note : Only the currently active quarter should be displayed on the User Screen.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+4) PUT : {{baseURL}}/api/cycles/1/close
+Why we created this API?
+
+To close the active cycle so no further goal updates happen after quarter ends.
+
+How it helps?
+
+Locks the quarter data
+
+Prevents editing after PMS timeline is finished
+
+Requirement mentioned in PPT?
+
+⚠️ Not directly written as “close cycle” in PPT
+But requirement clearly indicates cycle is time-bound and PMS submission happens within quarter.
+
+PPT Requirement (Copy)
+
+“In the first week of each quarter , HR will publish an emailer to all users regarding the completion of their Goal settings for that quarter.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+✅ GOAL APIs
+5) POST : http://localhost:9010/api/goals/predefined/Q1
+Why we created this API?
+
+To allow Manager (R1) to create predefined goals for employees.
+
+How it helps?
+
+Manager sets standard goals for their team
+
+Employees will see these goals and use them for SMART goal setting
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Based on project requirements or other business needs, R1 should submit predefined goals for their individual team.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+6) GET : http://localhost:9010/api/goals/predefined/employee/EMP101/Q1
+Why we created this API?
+
+To show predefined goals on Employee Screen.
+
+How it helps?
+
+Employee can:
+
+view predefined goals
+
+accept them or create SMART goals based on them
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Once the predefined goals are submitted, they should automatically reflect on the users’ screens.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+7) GET : http://localhost:9010/api/goals/predefined/manager/MGR001/EMP101/Q1
+Why we created this API?
+
+To allow Manager (R1) to view the goals they created for a specific employee.
+
+How it helps?
+
+Manager can verify employee-wise goals
+
+Useful for “My Team” screen
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Once the Q1 goals are submitted, R1 will be able to view them in their My Teams window.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+8) PUT : http://localhost:9010/api/goals/predefined/submit/MGR001/EMP101/Q1
+Why we created this API?
+
+Because Manager should not just save goals, they must submit predefined goals to employee.
+
+How it helps?
+
+Confirms predefined goals are final
+
+Makes goals visible on employee screen
+
+Validates max 5 + total weightage 100
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“R1’s SCREEN – SUBMIT PREDEFINED GOALS FOR USERS” 
+
+PMS_REQUIREMENT_Jan 26
+
+
+“Once the predefined goals are submitted, they should automatically reflect on the users’ screens.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+✅ SMART GOAL APIs (Employee)
+9) POST : http://localhost:9010/api/goals/smart/Q1
+Why we created this API?
+
+To allow employee to create SMART goals for the quarter.
+
+How it helps?
+
+Employee can add goals based on predefined goals given by manager.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“USER will either Accept or start filling their SMART * GOALS based on the R1’s Predefined Goals in this section.” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+10) GET : http://localhost:9010/api/goals/smart/employee/EMP101/Q1
+Why we created this API?
+
+To fetch employee’s SMART goals for UI display.
+
+How it helps?
+
+Employee can see saved SMART goals and review before final submission.
+
+Requirement mentioned in PPT?
+
+✅ Yes (screen shows goal list)
+
+PPT Requirement (Copy)
+
+“USER Screen for - Goal Setting Submission” 
+
+PMS_REQUIREMENT_Jan 26
+
+==========================================================================================================
+
+11) PUT : http://localhost:9010/api/goals/smart/submit/EMP101/Q1
+Why we created this API?
+
+Because employee must finally submit goals to manager (R1) after completing goal entry.
+
+How it helps?
+
+Validates max 5 goals
+
+Validates total weightage must be 100%
+
+Changes status to SUBMITTED
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“– a maximum of 5 goals can be added, and the total weightage must equal 100%.” 
+
+PMS_REQUIREMENT_Jan 26
+
+
+“SAVE DRAFT / SUBMIT TO R1”
+
+==========================================================================================================
+
+POST	:	http://localhost:9010/api/goals/development/Q1
+
+GET		:	http://localhost:9010/api/goals/development/employee/EMP101/Q1
+
+PUT		:	http://localhost:9010/api/goals/development/submit/EMP101/Q1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PENDING APIS
+
+✅ Pending APIs (Still Left)
+🔥 QUARTERLY FLOW (Remaining)
+12) Development Goals (Employee)
+13) Manager Review / Assessment (R1)
+
+GET /api/goals/manager/{managerId}/team/{quarter} (My Team list + progress)
+
+GET /api/goals/manager/{managerId}/employee/{employeeId}/{quarter} (view submitted goals)
+
+PUT /api/goals/manager/review/{goalId} (update rating/comments)
+
+PUT /api/goals/manager/submit-to-employee/{managerId}/{employeeId}/{quarter}
+
+14) Employee Acceptance after Manager Review
+
+GET /api/goals/employee/pending-acceptance/{employeeId}/{quarter}
+
+PUT /api/goals/employee/accept/{employeeId}/{quarter}
+
+15) Final Submit to HR
+
+PUT /api/goals/final-submit/{employeeId}/{quarter}
+
+🔥 ANNUAL PERFORMANCE REVIEW MODULE (Full Pending)
+16) Annual Review (Employee)
+
+GET /api/annual-review/goals/{employeeId}/{year} (fetch Q1-Q4 submitted goals)
+
+POST /api/annual-review/submit/{employeeId} (self review submission)
+
+17) Annual Review (Manager)
+
+PUT /api/annual-review/manager-review/{managerId}/{employeeId}
+
+PUT /api/annual-review/submit-to-employee/{managerId}/{employeeId}
+
+18) Annual Review (Employee Final Submit)
+
+PUT /api/annual-review/final-submit/{employeeId}
+
+🔥 HR REPORTS (Pending)
+19) Reports APIs
+
+GET /api/reports/predefined-goals
+
+GET /api/reports/goal-settings
+
+GET /api/reports/development-goals
+
+GET /api/reports/certification-completion
+
+GET /api/reports/detailed-goals-qwise
+
+🔥 HR DASHBOARD / PROGRESS STATUS (Pending)
+20) HR Progress APIs
+
+GET /api/hr/progress-status/{quarter}
+
+GET /api/hr/dashboard/{cycleId}
+
+🔥 NOTIFICATION / EMAILER (Pending)
+21) Emailer + Notifications APIs
+
+POST /api/notifications/emailer/create
+
+PUT /api/notifications/emailer/edit/{id}
+
+GET /api/notifications/emailer/preview/{id}
+
+POST /api/notifications/emailer/publish/{cycleType}
