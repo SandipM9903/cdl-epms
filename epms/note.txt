@@ -797,25 +797,17 @@ Meaning employee must confirm acceptance and then submit to HR.
 
 ==============================================================================================================================
 
+GET		:	http://localhost:9010/api/reports/predefined-goals?year=2025
+GET		:	http://localhost:9010/api/reports/goal-settings?year=2025
+GET		:	http://localhost:9010/api/reports/development-goals?year=2025
+GET		:	http://localhost:9010/api/reports/certification-completion?year=2026
+GET		:	http://localhost:9010/api/reports/detailed-goals-qwise?year=2025&quarter=Q1
+
+==============================================================================================================================
+
+
+
 PENDING APIS
-
-18) Annual Review (Employee Final Submit)
-
-PUT /api/annual-review/final-submit/{employeeId}
-
-🔥 HR REPORTS (Pending)
-19) Reports APIs
-
-GET /api/reports/predefined-goals
-
-GET /api/reports/goal-settings
-
-GET /api/reports/development-goals
-
-GET /api/reports/certification-completion
-
-GET /api/reports/detailed-goals-qwise
-
 🔥 HR DASHBOARD / PROGRESS STATUS (Pending)
 20) HR Progress APIs
 
