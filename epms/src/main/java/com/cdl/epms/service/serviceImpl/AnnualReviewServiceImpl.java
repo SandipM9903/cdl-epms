@@ -156,4 +156,27 @@ public class AnnualReviewServiceImpl implements AnnualReviewService {
 
         annualReviewRepository.save(review);
     }
+
+    @Override
+    public void finalSubmitToHR(String employeeId, Integer year) {
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        if (year == null) {
+            throw new BusinessException("Year is required");
+        }
+
+        AnnualReview review = annualReviewRepository.findByEmployeeIdAndYear(employeeId, year)
+                .orElseThrow(() -> new BusinessException("Annual review not found for employee"));
+
+        if (review.getStatus() != AnnualReviewStatus.SENT_TO_EMPLOYEE) {
+            throw new BusinessException("Annual review is not submitted to employee yet");
+        }
+
+        review.setStatus(AnnualReviewStatus.FINAL_SUBMITTED_TO_HR);
+
+        annualReviewRepository.save(review);
+    }
 }

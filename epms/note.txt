@@ -701,17 +701,103 @@ This requirement clearly states that Manager must enter assessment, so we need t
 
 ===================================================================================================================================
 
+PUT 	:	http://localhost:9010/api/annual-review/submit-to-employee/MGR001/EMP101
 
+✅ Why we used this API?
 
+Because after the Manager (R1) completes the Annual Review rating + remarks, the process must move to the Employee for acceptance.
 
+So this API is required to:
+
+Confirm manager has completed annual assessment
+
+Lock the manager’s rating/comments
+
+Change Annual Review status from:
+
+MANAGER_REVIEWED → SENT_TO_EMPLOYEE
+
+Store timestamp (submittedToEmployeeAt)
+
+Allow employee to see the reviewed annual assessment and then accept + final submit to HR
+
+Without this API, manager rating will stay saved but the annual review will never move forward in workflow.
+
+✅ Where it is written in PPT?
+
+This is mentioned in the Annual Performance Review flow slides.
+
+📌 PPT Requirement Line (Exact Meaning):
+
+“SUBMIT TO EMPLOYEE”
+“EMPLOYEE SCREEN”
+“FINAL SUBMIT TO HR”
+
+This is shown clearly in the Annual Review flow section where it displays:
+
+R1 SCREEN → SUBMIT TO EMPLOYEE → EMPLOYEE SCREEN → FINAL SUBMIT TO HR
+
+So the PPT explicitly requires a button/action called Submit to Employee, meaning backend must have an API for it.
+
+==============================================================================================================================
+
+PUT		:	http://localhost:9010/api/annual-review/final-submit/EMP101
+
+✅ Why we used this API?
+
+Because after the Manager (R1) finishes the Annual Review and clicks Submit to Employee, the employee must take final action.
+
+So this API is required for:
+
+✅ Employee Final Submission to HR
+
+It confirms that:
+
+Employee has reviewed manager rating/comments
+
+Employee agrees with the annual assessment
+
+Employee completes the Annual Review process
+
+The review is now forwarded to HR
+
+✅ Status Update
+
+This API updates status from:
+
+SENT_TO_EMPLOYEE → FINAL_SUBMITTED_TO_HR
+
+This locks the annual review so no one can edit it again.
+
+✅ Where it is written in PPT?
+
+This is clearly mentioned in the Annual Review flow section of your PPT.
+
+📌 In PPT, the flow is shown like:
+
+R1 SCREEN → SUBMIT TO EMPLOYEE → EMPLOYEE SCREEN → FINAL SUBMIT TO HR
+
+The PPT has a screen where employee has a button:
+
+✅ “FINAL SUBMIT TO HR”
+
+That exact button means backend must have an API for final submission.
+
+✅ PPT Requirement Line (Exact Meaning)
+
+In the Annual Review slide, it explicitly shows:
+
+FINAL SUBMIT TO HR
+
+And also the note says:
+
+“Please Note : If YES gets selected then it can be submitted to HR”
+
+Meaning employee must confirm acceptance and then submit to HR.
+
+==============================================================================================================================
 
 PENDING APIS
-
-17) Annual Review (Manager)
-
-PUT /api/annual-review/manager-review/{managerId}/{employeeId}
-
-PUT /api/annual-review/submit-to-employee/{managerId}/{employeeId}
 
 18) Annual Review (Employee Final Submit)
 

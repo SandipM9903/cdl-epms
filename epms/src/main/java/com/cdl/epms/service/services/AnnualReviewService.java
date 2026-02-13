@@ -15,4 +15,6 @@ public interface AnnualReviewService {
     AnnualReview updateManagerReview(String managerId, String employeeId, Integer year, Integer rating, String comment);
 
     void submitToEmployee(String managerId, String employeeId, Integer year);
+
+    void finalSubmitToHR(String employeeId, Integer year);
 }

@@ -1,5 +1,6 @@
 package com.cdl.epms.controller;
 
+import com.cdl.epms.dto.annualReview.AnnualFinalSubmitRequestDto;
 import com.cdl.epms.dto.annualReview.AnnualManagerReviewRequestDto;
 import com.cdl.epms.dto.annualReview.AnnualReviewRequestDto;
 import com.cdl.epms.model.AnnualReview;
@@ -62,5 +63,14 @@ public class AnnualReviewController {
     ) {
         annualReviewService.submitToEmployee(managerId, employeeId, dto.getYear());
         return ResponseEntity.ok("Annual review submitted to employee successfully");
+    }
+
+    @PutMapping("/final-submit/{employeeId}")
+    public ResponseEntity<String> finalSubmitToHR(
+            @PathVariable String employeeId,
+            @RequestBody AnnualFinalSubmitRequestDto dto
+    ) {
+        annualReviewService.finalSubmitToHR(employeeId, dto.getYear());
+        return ResponseEntity.ok("Annual review final submitted to HR successfully");
     }
 }
