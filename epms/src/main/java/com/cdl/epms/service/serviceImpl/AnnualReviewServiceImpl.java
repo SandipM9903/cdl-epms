@@ -15,6 +15,7 @@ import java.util.List;
 
 @Service
 public class AnnualReviewServiceImpl implements AnnualReviewService {
+
     private final GoalRepository goalRepository;
     private final AnnualReviewRepository annualReviewRepository;
 
@@ -74,12 +75,16 @@ public class AnnualReviewServiceImpl implements AnnualReviewService {
         review.setSelfRating(dto.getSelfRating());
         review.setSelfComment(dto.getSelfComment());
         review.setStatus(AnnualReviewStatus.SELF_SUBMITTED);
+        review.setSubmittedAt(LocalDateTime.now());
 
         return annualReviewRepository.save(review);
     }
 
+    // ================= MANAGER REVIEW =================
+
     @Override
-    public AnnualReview updateManagerReview(String managerId, String employeeId, Integer year, Integer rating, String comment) {
+    public AnnualReview updateManagerReview(String managerId, String employeeId, Integer year,
+                                            Integer rating, String comment) {
 
         if (managerId == null || managerId.trim().isEmpty()) {
             throw new BusinessException("Manager ID is required");
@@ -93,6 +98,10 @@ public class AnnualReviewServiceImpl implements AnnualReviewService {
             throw new BusinessException("Year is required");
         }
 
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new BusinessException("Manager rating must be between 1 and 5");
+        }
+
         AnnualReview review = annualReviewRepository.findByEmployeeIdAndYear(employeeId, year)
                 .orElseThrow(() -> new BusinessException("Annual review not found for employee"));
 
@@ -102,10 +111,6 @@ public class AnnualReviewServiceImpl implements AnnualReviewService {
 
         if (review.getStatus() != AnnualReviewStatus.SELF_SUBMITTED) {
             throw new BusinessException("Annual review is not in SELF_SUBMITTED status");
-        }
-
-        if (rating == null || rating < 1 || rating > 5) {
-            throw new BusinessException("Manager rating must be between 1 and 5");
         }
 
         review.setManagerRating(rating);
@@ -118,6 +123,18 @@ public class AnnualReviewServiceImpl implements AnnualReviewService {
 
     @Override
     public void submitToEmployee(String managerId, String employeeId, Integer year) {
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new BusinessException("Manager ID is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        if (year == null) {
+            throw new BusinessException("Year is required");
+        }
 
         AnnualReview review = annualReviewRepository.findByEmployeeIdAndYear(employeeId, year)
                 .orElseThrow(() -> new BusinessException("Annual review not found for employee"));
