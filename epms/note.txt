@@ -275,54 +275,437 @@ PMS_REQUIREMENT_Jan 26
 
 POST	:	http://localhost:9010/api/goals/development/Q1
 
+Why we created this API?
+
+To allow the Employee to create and save their Development Goals & Plans for the selected quarter.
+
+How it helps?
+
+Employee can add development goals like certification, training, learning plan etc.
+
+Saves the development goal as Draft.
+
+Supports incremental goal creation (SAVE DRAFT concept).
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“USER Screen for - DEVELOPMENT GOALS Submission – Eg.”
+“– a maximum of 5 Development goals & plans can be added”
+“User screen can be same as the old CDL GS screen.”
+
+(PMS_REQUIREMENT_Jan 26)
+
+==========================================================================================================================
+
 GET		:	http://localhost:9010/api/goals/development/employee/EMP101/Q1
+
+Why we created this API?
+
+To fetch all saved Development Goals of Employee for the selected quarter.
+
+How it helps?
+
+Displays development goals in Employee UI screen.
+
+Employee can review/edit goals before submitting to Manager.
+
+Needed for showing already saved draft goals.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“USER Screen for - DEVELOPMENT GOALS Submission – Eg.”
+“Blue Section will be filled by the Employee”
+
+(PMS_REQUIREMENT_Jan 26)
+
+============================================================================================================================
 
 PUT		:	http://localhost:9010/api/goals/development/submit/EMP101/Q1
 
+Why we created this API?
+
+Because employee must finally submit their Development Goals to Manager (R1) after completing the goal entry.
+
+How it helps?
+
+Ensures goals are finalized.
+
+Validates max 5 goals.
+
+Validates total weightage must be 100%.
+
+Changes goal status from DRAFT → SUBMITTED_TO_MANAGER.
+
+After submission, Manager can view it in My Team section.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“– a maximum of 5 Development goals & plans can be added”
+“SAVE DRAFT / SUBMIT”
+“– a maximum of 5 goals can be added, and the total weightage must equal 100%.”
+
+(PMS_REQUIREMENT_Jan 26)
+
+===========================================================================================================================
 
 
+GET		:	 http://localhost:9010/api/goals/manager/MGR001/team/Q1
+
+Why we created this API?
+
+To fetch the list of employees who are part of the Manager’s (R1) team for a specific quarter.
+
+How it helps?
+
+Displays the My Team screen for Manager.
+
+Manager can see all employees who submitted goals for review.
+
+Manager can search/select employee and open their goal form.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Once the Q1 goals are submitted, R1 will be able to view them in their My Teams window.”
+“Search option is to search Team member”
+
+(PMS_REQUIREMENT_Jan 26)
+
+=============================================================================================================================
+
+GET		:	http://localhost:9010/api/goals/manager/MGR001/employee/EMP101/Q1
+
+Why we created this API?
+
+To allow Manager (R1) to view all goals submitted by a specific employee for a selected quarter.
+
+How it helps?
+
+Shows employee’s SMART goals and Development goals to manager.
+
+Manager can review submitted goals and fill assessment section.
+
+Used when Manager clicks View in My Team screen.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“R1 Screen once clicked on ‘View’ – User Goals can be viewed.”
+
+(PMS_REQUIREMENT_Jan 26)
+
+=====================================================================================================================
+
+PUT		:	 http://localhost:9010/api/goals/manager/review
+
+Why we created this API?
+
+To allow Manager (R1) to give rating and remarks for employee goals.
+
+How it helps?
+
+Manager can update:
+
+rating
+
+comments/remarks
+
+Stores manager assessment in DB.
+
+Changes goal status from:
+SUBMITTED_TO_MANAGER → MANAGER_REVIEWED
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Blue section will be filled by the Manager”
+“Manager Assessment Screen (Edit / View / Reset)”
+
+(PMS_REQUIREMENT_Jan 26)
+
+===============================================================================================================================
+
+PUT		:	 http://localhost:9010/api/goals/manager/submit-to-employee/MGR001/EMP101/Q1
+
+Why we created this API?
+
+Because Manager must finally submit the completed assessment back to Employee for acceptance.
+
+How it helps?
+
+Confirms Manager has completed review.
+
+Locks Manager review changes.
+
+Sends reviewed form to Employee.
+
+Updates status from:
+MANAGER_REVIEWED → SENT_TO_EMPLOYEE
+
+Employee will then accept and final submit to HR.
+
+Requirement mentioned in PPT?
+
+✅ Yes
+
+PPT Requirement (Copy)
+
+“Once Manager / R1 completes this assessment, it is submitted to the employee for acceptance.”
+“After the employee accepts the ratings, they should click on ‘Final Submit’, which will then forward the form to HR for further action.”
+
+(PMS_REQUIREMENT_Jan 26)
+
+===============================================================================================================================
+
+GET		:	http://localhost:9010/api/goals/employee/pending-acceptance/EMP101/Q1
+
+✅ Why we created this API?
+
+Because after Manager (R1) reviews the employee goals and submits back, the employee must be able to view the reviewed goals before accepting.
+
+Employee should see:
+
+Manager Rating
+
+Manager Remarks
+
+Reviewed goals list
+
+Updated goal status
+
+So this API is required to fetch goals which are waiting for employee acceptance.
+
+✅ How it helps?
+
+This API helps the UI to show the "Pending Acceptance" section in employee screen.
+
+It ensures employee sees the manager’s assessment before final submission.
+
+✅ Requirement mentioned in PPT?
+
+✅ Yes
+
+📌 PPT Requirement (Copy)
+
+"Once Manager / R1 completes this assessment, it is submitted to the employee for acceptance."
+
+This clearly means employee must have a screen to view reviewed goals, so GET API is needed.
+
+===============================================================================================================================
+
+PUT		:	http://localhost:9010/api/goals/employee/accept/EMP101/Q1
+
+✅ Why we created this API?
+
+Because employee must explicitly accept manager’s review (rating + remarks) before final submission to HR.
+
+Without acceptance, employee cannot forward the form.
+
+This API confirms employee has agreed with manager evaluation.
+
+✅ How it helps?
+
+Locks employee’s acceptance
+
+Updates goal status from:
+
+SENT_TO_EMPLOYEE → ACCEPTED_BY_EMPLOYEE
+
+Prepares system for final HR submission step
+
+✅ Requirement mentioned in PPT?
+
+✅ Yes
+
+📌 PPT Requirement (Copy)
+
+"After the employee accepts the ratings, they should click on ‘Final Submit’, which will then forward the form to HR for further action."
+
+This statement directly requires an Accept action, so PUT API is mandatory.
+
+===============================================================================================================================
+
+PUT		:	http://localhost:9010/api/goals/final-submit/EMP101/Q1
+
+Because after employee accepts manager rating, employee must final submit the complete goal form to HR.
+
+This API will:
+
+Validate employee already accepted goals
+
+Change status from:
+
+ACCEPTED_BY_EMPLOYEE → FINAL_SUBMITTED_TO_HR
+
+Lock the process for HR action
+
+✅ PPT Requirement Mapping (Important for Interview)
+
+📌 PPT Line:
+"After the employee accepts the ratings, they should click on ‘Final Submit’, which will then forward the form to HR for further action."
+
+This sentence directly demands this API.
 
 
+✅ Status Flow After This
+Step	Status
+Manager sends to employee	SENT_TO_EMPLOYEE
+Employee accepts	ACCEPTED_BY_EMPLOYEE
+Employee final submit	FINAL_SUBMITTED_TO_HR
 
+===============================================================================================================================
 
+GET		:	 http://localhost:9010/api/annual-review/goals/EMP101/2026
 
+✅ Why we need this API?
 
+Because during Annual Performance Review, employee must see all quarterly goals (Q1-Q4) that were submitted in that year.
+
+This API fetches:
+
+Q1 submitted goals
+
+Q2 submitted goals
+
+Q3 submitted goals
+
+Q4 submitted goals
+
+Manager ratings/remarks (if given)
+
+Final status
+
+So employee can review their full year performance before giving self review.
+
+✅ How it helps?
+
+This API is used to show the Annual Review Screen, where employee sees yearly performance summary.
+
+✅ Where requirement is written in PPT?
+
+✅ Yes, clearly mentioned
+
+📌 PPT Requirement (Copy / Meaning):
+“Annual Performance Review will be based on all quarter goal submissions (Q1-Q4).”
+
+and
+
+“Employee should be able to view yearly goals summary for annual review.”
+
+This line indicates the system must fetch all quarterly goals, so GET API is mandatory.
+
+===============================================================================================================================
+
+POST	:	 http://localhost:9010/api/annual-review/submit/EMP101
+
+✅ Why we need this API?
+
+Because after employee views their yearly goal summary, employee must submit their Self Assessment / Self Review.
+
+This includes:
+
+Self rating
+
+Self comment
+
+Achievements
+
+Challenges
+
+Overall performance remarks
+
+So this API stores employee’s annual self review in database.
+
+✅ How it helps?
+
+This is the action that confirms:
+
+✅ Employee has completed annual self review
+✅ Annual review process can move to Manager / HR next step
+
+✅ Where requirement is written in PPT?
+
+✅ Yes
+
+📌 PPT Requirement (Copy):
+“Employee will fill self review and submit the annual review form.”
+
+and
+
+“Annual Performance Review submission by employee.”
+
+This requirement directly demands a submission API, so POST is required.
+
+===============================================================================================================================
+
+PUT		:	http://localhost:9010/api/annual-review/manager-review/MGR001/EMP101
+
+✅ Why we created this API?
+
+Because after employee submits their Annual Self Review, the Manager (R1) must evaluate the employee’s yearly performance.
+
+Manager should be able to fill:
+
+Manager Rating
+
+Manager Comment / Remarks
+
+Overall annual assessment
+
+So this API allows Manager to update the annual review record with their evaluation.
+
+✅ How it helps?
+
+This API helps in:
+
+✅ Saving manager annual review feedback in database
+✅ Updating annual review status:
+
+SELF_SUBMITTED → MANAGER_REVIEWED
+
+✅ Storing the review timestamp (managerReviewedAt)
+
+This is required so that manager can complete annual review assessment before sending it to employee.
+
+✅ Requirement mentioned in PPT?
+
+✅ Yes
+
+📌 PPT Requirement (Copy)
+
+“Manager Assessment Section will be filled by the Manager.”
+“Manager will review the annual performance review and provide rating and remarks.”
+
+This requirement clearly states that Manager must enter assessment, so we need this API.
+
+===================================================================================================================================
 
 
 
 
 
 PENDING APIS
-
-✅ Pending APIs (Still Left)
-🔥 QUARTERLY FLOW (Remaining)
-12) Development Goals (Employee)
-13) Manager Review / Assessment (R1)
-
-GET /api/goals/manager/{managerId}/team/{quarter} (My Team list + progress)
-
-GET /api/goals/manager/{managerId}/employee/{employeeId}/{quarter} (view submitted goals)
-
-PUT /api/goals/manager/review/{goalId} (update rating/comments)
-
-PUT /api/goals/manager/submit-to-employee/{managerId}/{employeeId}/{quarter}
-
-14) Employee Acceptance after Manager Review
-
-GET /api/goals/employee/pending-acceptance/{employeeId}/{quarter}
-
-PUT /api/goals/employee/accept/{employeeId}/{quarter}
-
-15) Final Submit to HR
-
-PUT /api/goals/final-submit/{employeeId}/{quarter}
-
-🔥 ANNUAL PERFORMANCE REVIEW MODULE (Full Pending)
-16) Annual Review (Employee)
-
-GET /api/annual-review/goals/{employeeId}/{year} (fetch Q1-Q4 submitted goals)
-
-POST /api/annual-review/submit/{employeeId} (self review submission)
 
 17) Annual Review (Manager)
 

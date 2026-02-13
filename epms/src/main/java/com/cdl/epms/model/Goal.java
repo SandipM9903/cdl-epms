@@ -51,6 +51,18 @@ public class Goal {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "manager_rating")
+    private Integer managerRating;
+
+    @Column(name = "manager_comment", columnDefinition = "TEXT")
+    private String managerComment;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "submitted_to_employee_at")
+    private LocalDateTime submittedToEmployeeAt;
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();

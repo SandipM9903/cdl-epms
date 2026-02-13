@@ -28,4 +28,18 @@ public interface GoalService {
     List<Goal> getDevelopmentGoalsByEmployee(String employeeId, Quarter quarter);
 
     void submitDevelopmentGoals(String employeeId, Quarter quarter);
+
+    List<String> getTeamEmployeesByManager(String managerId, Quarter quarter);
+
+    List<Goal> getGoalsForManagerReview(String managerId, String employeeId, Quarter quarter);
+
+    Goal updateManagerReview(Long goalId, Integer rating, String comment);
+
+    void submitManagerReviewToEmployee(String managerId, String employeeId, Quarter quarter);
+
+    List<Goal> getPendingGoalsForAcceptance(String employeeId, Quarter quarter);
+
+    void acceptReviewedGoals(String employeeId, Quarter quarter);
+
+    void finalSubmitToHR(String employeeId, Quarter quarter);
 }

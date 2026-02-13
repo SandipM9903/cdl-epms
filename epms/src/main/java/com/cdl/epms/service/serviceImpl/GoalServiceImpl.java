@@ -13,6 +13,7 @@ import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.GoalService;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -318,6 +319,177 @@ public class GoalServiceImpl implements GoalService {
 
         for (Goal goal : goals) {
             goal.setStatus(GoalStatus.SUBMITTED_TO_MANAGER);
+        }
+
+        goalRepository.saveAll(goals);
+    }
+
+    @Override
+    public List<String> getTeamEmployeesByManager(String managerId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        List<Goal> goals = goalRepository.findByManagerIdAndPerformanceCycleAndQuarter(
+                managerId,
+                activeCycle,
+                quarter
+        );
+
+        return goals.stream()
+                .map(Goal::getEmployeeId)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public List<Goal> getGoalsForManagerReview(String managerId, String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        return goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarter(
+                managerId,
+                employeeId,
+                activeCycle,
+                quarter
+        );
+    }
+
+    @Override
+    public Goal updateManagerReview(Long goalId, Integer rating, String comment) {
+
+        Goal goal = goalRepository.findById(goalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalId));
+
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new BusinessException("Manager rating must be between 1 and 5");
+        }
+
+        goal.setManagerRating(rating);
+        goal.setManagerComment(comment);
+        goal.setReviewedAt(LocalDateTime.now());
+        goal.setStatus(GoalStatus.MANAGER_REVIEWED);
+
+        return goalRepository.save(goal);
+    }
+
+    @Override
+    public void submitManagerReviewToEmployee(String managerId, String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        List<Goal> goals = goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalTypeIn(
+                managerId,
+                employeeId,
+                activeCycle,
+                quarter,
+                List.of(GoalType.SMART, GoalType.DEVELOPMENT)
+        );
+
+        if (goals.isEmpty()) {
+            throw new BusinessException("No SMART/DEVELOPMENT goals found to submit");
+        }
+
+        for (Goal goal : goals) {
+            if (goal.getManagerRating() == null) {
+                throw new BusinessException("Manager rating is required before submission");
+            }
+            goal.setStatus(GoalStatus.SENT_TO_EMPLOYEE);
+            goal.setSubmittedToEmployeeAt(LocalDateTime.now());
+        }
+
+        goalRepository.saveAll(goals);
+    }
+
+    @Override
+    public List<Goal> getPendingGoalsForAcceptance(String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        if (quarter == null) {
+            throw new BusinessException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
+                employeeId,
+                activeCycle,
+                quarter,
+                GoalStatus.SENT_TO_EMPLOYEE
+        );
+
+        if (goals.isEmpty()) {
+            throw new BusinessException("No goals pending for acceptance");
+        }
+
+        return goals;
+    }
+
+    @Override
+    public void acceptReviewedGoals(String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        if (quarter == null) {
+            throw new BusinessException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
+                employeeId,
+                activeCycle,
+                quarter,
+                GoalStatus.SENT_TO_EMPLOYEE
+        );
+
+        if (goals.isEmpty()) {
+            throw new BusinessException("No goals found for acceptance");
+        }
+
+        for (Goal goal : goals) {
+            goal.setStatus(GoalStatus.ACCEPTED_BY_EMPLOYEE);
+        }
+
+        goalRepository.saveAll(goals);
+    }
+
+    @Override
+    public void finalSubmitToHR(String employeeId, Quarter quarter) {
+
+        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+
+        if (quarter == null) {
+            throw new BusinessException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new BusinessException("Employee ID is required");
+        }
+
+        List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
+                employeeId,
+                activeCycle,
+                quarter,
+                GoalStatus.ACCEPTED_BY_EMPLOYEE
+        );
+
+        if (goals.isEmpty()) {
+            throw new BusinessException("No accepted goals found to submit to HR");
+        }
+
+        for (Goal goal : goals) {
+            goal.setStatus(GoalStatus.FINAL_SUBMITTED_TO_HR);
         }
 
         goalRepository.saveAll(goals);

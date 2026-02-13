@@ -1,6 +1,7 @@
 package com.cdl.epms.controller;
 
 import com.cdl.epms.common.enums.Quarter;
+import com.cdl.epms.dto.managerRating.ManagerRatingRequestDTO;
 import com.cdl.epms.model.Goal;
 import com.cdl.epms.service.services.GoalService;
 import jakarta.validation.Valid;
@@ -109,5 +110,72 @@ public class GoalController {
     ) {
         goalService.submitDevelopmentGoals(employeeId, quarter);
         return ResponseEntity.ok("Development goals submitted successfully");
+    }
+
+    // ================= MANAGER REVIEW (R1) =================
+
+    @GetMapping("/manager/{managerId}/team/{quarter}")
+    public ResponseEntity<List<String>> getTeamEmployees(
+            @PathVariable String managerId,
+            @PathVariable Quarter quarter
+    ) {
+        return ResponseEntity.ok(goalService.getTeamEmployeesByManager(managerId, quarter));
+    }
+
+    @GetMapping("/manager/{managerId}/employee/{employeeId}/{quarter}")
+    public ResponseEntity<List<Goal>> getEmployeeGoalsForManager(
+            @PathVariable String managerId,
+            @PathVariable String employeeId,
+            @PathVariable Quarter quarter
+    ) {
+        return ResponseEntity.ok(goalService.getGoalsForManagerReview(managerId, employeeId, quarter));
+    }
+
+    @PutMapping("/manager/review")
+    public ResponseEntity<Goal> updateManagerReview(@RequestBody ManagerRatingRequestDTO dto) {
+
+        Goal updated = goalService.updateManagerReview(
+                dto.getGoalId(),
+                dto.getManagerRating(),
+                dto.getManagerRemark()
+        );
+
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/manager/submit-to-employee/{managerId}/{employeeId}/{quarter}")
+    public ResponseEntity<String> submitManagerReviewToEmployee(
+            @PathVariable String managerId,
+            @PathVariable String employeeId,
+            @PathVariable Quarter quarter
+    ) {
+        goalService.submitManagerReviewToEmployee(managerId, employeeId, quarter);
+        return ResponseEntity.ok("Manager review submitted to employee successfully");
+    }
+
+    @GetMapping("/employee/pending-acceptance/{employeeId}/{quarter}")
+    public ResponseEntity<List<Goal>> getPendingAcceptanceGoals(
+            @PathVariable String employeeId,
+            @PathVariable Quarter quarter
+    ) {
+        return ResponseEntity.ok(goalService.getPendingGoalsForAcceptance(employeeId, quarter));
+    }
+
+    @PutMapping("/employee/accept/{employeeId}/{quarter}")
+    public ResponseEntity<String> acceptReviewedGoals(
+            @PathVariable String employeeId,
+            @PathVariable Quarter quarter
+    ) {
+        goalService.acceptReviewedGoals(employeeId, quarter);
+        return ResponseEntity.ok("Goals accepted successfully");
+    }
+
+    @PutMapping("/final-submit/{employeeId}/{quarter}")
+    public ResponseEntity<String> finalSubmitToHR(
+            @PathVariable String employeeId,
+            @PathVariable Quarter quarter
+    ) {
+        goalService.finalSubmitToHR(employeeId, quarter);
+        return ResponseEntity.ok("Goals final submitted to HR successfully");
     }
 }
