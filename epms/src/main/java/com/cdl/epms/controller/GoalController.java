@@ -3,8 +3,10 @@ package com.cdl.epms.controller;
 import com.cdl.epms.common.enums.Quarter;
 import com.cdl.epms.dto.managerRating.ManagerRatingRequestDTO;
 import com.cdl.epms.model.Goal;
+import com.cdl.epms.payload.ApiResponse;
 import com.cdl.epms.service.services.GoalService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,168 +16,304 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/goals")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class GoalController {
 
     private final GoalService goalService;
 
-    public GoalController(GoalService goalService) {
-        this.goalService = goalService;
-    }
-
     @PostMapping("/predefined/{quarter}")
-    public ResponseEntity<Goal> savePredefinedGoal(
+    public ResponseEntity<ApiResponse<Goal>> savePredefinedGoal(
             @PathVariable("quarter") Quarter quarter,
             @Valid @RequestBody Goal goal
     ) {
-        Goal saved = goalService.savePredefinedGoal(goal, quarter);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+
+        Goal savedGoal = goalService.savePredefinedGoal(goal, quarter);
+
+        ApiResponse<Goal> response = ApiResponse.<Goal>builder()
+                .success(true)
+                .message("Predefined goal created successfully")
+                .data(savedGoal)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/predefined/employee/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getPredefinedGoalsByEmployee(
+    public ResponseEntity<ApiResponse<List<Goal>>> getPredefinedGoalsByEmployee(
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getPredefinedGoalsByEmployee(employeeId, quarter));
+
+        List<Goal> goals = goalService.getPredefinedGoalsByEmployee(employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Predefined goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/predefined/manager/{managerId}/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getPredefinedGoalsByManager(
+    public ResponseEntity<ApiResponse<List<Goal>>> getPredefinedGoalsByManager(
             @PathVariable("managerId") String managerId,
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getPredefinedGoalsByManager(managerId, employeeId, quarter));
+
+        List<Goal> goals = goalService.getPredefinedGoalsByManager(managerId, employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Predefined goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/predefined/submit/{managerId}/{employeeId}/{quarter}")
-    public ResponseEntity<String> submitPredefinedGoals(
+    public ResponseEntity<ApiResponse<String>> submitPredefinedGoals(
             @PathVariable("managerId") String managerId,
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
+
         goalService.submitPredefinedGoals(managerId, employeeId, quarter);
-        return ResponseEntity.ok("Predefined goals submitted successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Predefined goals submitted successfully")
+                .data("Submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/smart/{quarter}")
-    public ResponseEntity<Goal> saveSmartGoal(
+    public ResponseEntity<ApiResponse<Goal>> saveSmartGoal(
             @PathVariable("quarter") Quarter quarter,
             @Valid @RequestBody Goal goal
     ) {
-        Goal saved = goalService.saveSmartGoal(goal, quarter);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+
+        Goal savedGoal = goalService.saveSmartGoal(goal, quarter);
+
+        ApiResponse<Goal> response = ApiResponse.<Goal>builder()
+                .success(true)
+                .message("SMART goal created successfully")
+                .data(savedGoal)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/smart/employee/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getSmartGoalsByEmployee(
+    public ResponseEntity<ApiResponse<List<Goal>>> getSmartGoalsByEmployee(
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getSmartGoalsByEmployee(employeeId, quarter));
+
+        List<Goal> goals = goalService.getSmartGoalsByEmployee(employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("SMART goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/smart/submit/{employeeId}/{quarter}")
-    public ResponseEntity<String> submitSmartGoals(
+    public ResponseEntity<ApiResponse<String>> submitSmartGoals(
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
+
         goalService.submitSmartGoals(employeeId, quarter);
-        return ResponseEntity.ok("SMART goals submitted successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("SMART goals submitted successfully")
+                .data("Submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
-    // ================= DEVELOPMENT GOALS (EMPLOYEE) =================
-
     @PostMapping("/development/{quarter}")
-    public ResponseEntity<Goal> saveDevelopmentGoal(
+    public ResponseEntity<ApiResponse<Goal>> saveDevelopmentGoal(
             @PathVariable("quarter") Quarter quarter,
             @Valid @RequestBody Goal goal
     ) {
-        Goal saved = goalService.saveDevelopmentGoal(goal, quarter);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+
+        Goal savedGoal = goalService.saveDevelopmentGoal(goal, quarter);
+
+        ApiResponse<Goal> response = ApiResponse.<Goal>builder()
+                .success(true)
+                .message("Development goal created successfully")
+                .data(savedGoal)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/development/employee/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getDevelopmentGoalsByEmployee(
+    public ResponseEntity<ApiResponse<List<Goal>>> getDevelopmentGoalsByEmployee(
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getDevelopmentGoalsByEmployee(employeeId, quarter));
+
+        List<Goal> goals = goalService.getDevelopmentGoalsByEmployee(employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Development goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/development/submit/{employeeId}/{quarter}")
-    public ResponseEntity<String> submitDevelopmentGoals(
+    public ResponseEntity<ApiResponse<String>> submitDevelopmentGoals(
             @PathVariable("employeeId") String employeeId,
             @PathVariable("quarter") Quarter quarter
     ) {
+
         goalService.submitDevelopmentGoals(employeeId, quarter);
-        return ResponseEntity.ok("Development goals submitted successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Development goals submitted successfully")
+                .data("Submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
-    // ================= MANAGER REVIEW (R1) =================
-
     @GetMapping("/manager/{managerId}/team/{quarter}")
-    public ResponseEntity<List<String>> getTeamEmployees(
+    public ResponseEntity<ApiResponse<List<String>>> getTeamEmployees(
             @PathVariable String managerId,
             @PathVariable Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getTeamEmployeesByManager(managerId, quarter));
+
+        List<String> employees = goalService.getTeamEmployeesByManager(managerId, quarter);
+
+        ApiResponse<List<String>> response = ApiResponse.<List<String>>builder()
+                .success(true)
+                .message("Team employees fetched successfully")
+                .data(employees)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/manager/{managerId}/employee/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getEmployeeGoalsForManager(
+    public ResponseEntity<ApiResponse<List<Goal>>> getEmployeeGoalsForManager(
             @PathVariable String managerId,
             @PathVariable String employeeId,
             @PathVariable Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getGoalsForManagerReview(managerId, employeeId, quarter));
+
+        List<Goal> goals = goalService.getGoalsForManagerReview(managerId, employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Employee goals fetched successfully for manager review")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/manager/review")
-    public ResponseEntity<Goal> updateManagerReview(@RequestBody ManagerRatingRequestDTO dto) {
+    public ResponseEntity<ApiResponse<Goal>> updateManagerReview(
+            @Valid @RequestBody ManagerRatingRequestDTO dto
+    ) {
 
-        Goal updated = goalService.updateManagerReview(
+        Goal updatedGoal = goalService.updateManagerReview(
                 dto.getGoalId(),
                 dto.getManagerRating(),
                 dto.getManagerRemark()
         );
 
-        return ResponseEntity.ok(updated);
+        ApiResponse<Goal> response = ApiResponse.<Goal>builder()
+                .success(true)
+                .message("Manager review updated successfully")
+                .data(updatedGoal)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/manager/submit-to-employee/{managerId}/{employeeId}/{quarter}")
-    public ResponseEntity<String> submitManagerReviewToEmployee(
+    public ResponseEntity<ApiResponse<String>> submitManagerReviewToEmployee(
             @PathVariable String managerId,
             @PathVariable String employeeId,
             @PathVariable Quarter quarter
     ) {
+
         goalService.submitManagerReviewToEmployee(managerId, employeeId, quarter);
-        return ResponseEntity.ok("Manager review submitted to employee successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Manager review submitted to employee successfully")
+                .data("Submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/employee/pending-acceptance/{employeeId}/{quarter}")
-    public ResponseEntity<List<Goal>> getPendingAcceptanceGoals(
+    public ResponseEntity<ApiResponse<List<Goal>>> getPendingAcceptanceGoals(
             @PathVariable String employeeId,
             @PathVariable Quarter quarter
     ) {
-        return ResponseEntity.ok(goalService.getPendingGoalsForAcceptance(employeeId, quarter));
+
+        List<Goal> goals = goalService.getPendingGoalsForAcceptance(employeeId, quarter);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Pending acceptance goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/employee/accept/{employeeId}/{quarter}")
-    public ResponseEntity<String> acceptReviewedGoals(
+    public ResponseEntity<ApiResponse<String>> acceptReviewedGoals(
             @PathVariable String employeeId,
             @PathVariable Quarter quarter
     ) {
+
         goalService.acceptReviewedGoals(employeeId, quarter);
-        return ResponseEntity.ok("Goals accepted successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Goals accepted successfully")
+                .data("Accepted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/final-submit/{employeeId}/{quarter}")
-    public ResponseEntity<String> finalSubmitToHR(
+    public ResponseEntity<ApiResponse<String>> finalSubmitToHR(
             @PathVariable String employeeId,
             @PathVariable Quarter quarter
     ) {
+
         goalService.finalSubmitToHR(employeeId, quarter);
-        return ResponseEntity.ok("Goals final submitted to HR successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Goals final submitted to HR successfully")
+                .data("Final submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

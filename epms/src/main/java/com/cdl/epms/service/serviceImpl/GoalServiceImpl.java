@@ -4,53 +4,61 @@ import com.cdl.epms.common.enums.CycleStatus;
 import com.cdl.epms.common.enums.GoalStatus;
 import com.cdl.epms.common.enums.GoalType;
 import com.cdl.epms.common.enums.Quarter;
-import com.cdl.epms.exception.BusinessException;
+import com.cdl.epms.exception.ConflictException;
 import com.cdl.epms.exception.ResourceNotFoundException;
+import com.cdl.epms.exception.ValidationException;
 import com.cdl.epms.model.Goal;
 import com.cdl.epms.model.PerformanceCycle;
 import com.cdl.epms.repository.GoalRepository;
 import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.GoalService;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GoalServiceImpl implements GoalService {
 
     private final GoalRepository goalRepository;
     private final PerformanceCycleRepository cycleRepository;
+    private final ModelMapper modelMapper;
 
-    public GoalServiceImpl(GoalRepository goalRepository, PerformanceCycleRepository cycleRepository) {
-        this.goalRepository = goalRepository;
-        this.cycleRepository = cycleRepository;
+    private PerformanceCycle getActiveCycle() {
+        return cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
     }
 
     @Override
     public Goal savePredefinedGoal(Goal goal, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (goal == null) {
+            throw new ValidationException("Goal data is required");
         }
 
         if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         if (goal.getManagerId() == null || goal.getManagerId().trim().isEmpty()) {
-            throw new BusinessException("Manager ID is required");
+            throw new ValidationException("Manager ID is required");
         }
 
         if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
-            throw new BusinessException("Goal title is required");
+            throw new ValidationException("Goal title is required");
         }
 
         if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
-            throw new BusinessException("Weightage must be greater than 0");
+            throw new ValidationException("Weightage must be greater than 0");
         }
 
         long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
@@ -61,22 +69,30 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (count >= 5) {
-            throw new BusinessException("Maximum 5 predefined goals allowed");
+            throw new ConflictException("Maximum 5 predefined goals allowed");
         }
 
-        goal.setPerformanceCycle(activeCycle);
-        goal.setQuarter(quarter);
-        goal.setGoalType(GoalType.PREDEFINED);
-        goal.setStatus(GoalStatus.DRAFT);
+        Goal newGoal = modelMapper.map(goal, Goal.class);
+        newGoal.setPerformanceCycle(activeCycle);
+        newGoal.setQuarter(quarter);
+        newGoal.setGoalType(GoalType.PREDEFINED);
+        newGoal.setStatus(GoalStatus.DRAFT);
 
-        return goalRepository.save(goal);
+        return goalRepository.save(newGoal);
     }
 
     @Override
     public List<Goal> getPredefinedGoalsByEmployee(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         return goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 employeeId,
@@ -89,8 +105,19 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public List<Goal> getPredefinedGoalsByManager(String managerId, String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new ValidationException("Manager ID is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         return goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 managerId,
@@ -104,8 +131,19 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void submitPredefinedGoals(String managerId, String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new ValidationException("Manager ID is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         List<Goal> goals = goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 managerId,
@@ -116,11 +154,11 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No predefined goals found to submit");
+            throw new ResourceNotFoundException("No predefined goals found to submit");
         }
 
         if (goals.size() > 5) {
-            throw new BusinessException("Maximum 5 predefined goals allowed");
+            throw new ConflictException("Maximum 5 predefined goals allowed");
         }
 
         int totalWeightage = goals.stream()
@@ -128,7 +166,7 @@ public class GoalServiceImpl implements GoalService {
                 .sum();
 
         if (totalWeightage != 100) {
-            throw new BusinessException("Total weightage must be 100%");
+            throw new ConflictException("Total weightage must be 100%");
         }
 
         for (Goal goal : goals) {
@@ -138,28 +176,29 @@ public class GoalServiceImpl implements GoalService {
         goalRepository.saveAll(goals);
     }
 
-    // ================= SMART GOALS (EMPLOYEE) =================
-
     @Override
     public Goal saveSmartGoal(Goal goal, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (goal == null) {
+            throw new ValidationException("Goal data is required");
         }
 
         if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
-            throw new BusinessException("Goal title is required");
+            throw new ValidationException("Goal title is required");
         }
 
         if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
-            throw new BusinessException("Weightage must be greater than 0");
+            throw new ValidationException("Weightage must be greater than 0");
         }
 
         long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
@@ -170,22 +209,30 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (count >= 5) {
-            throw new BusinessException("Maximum 5 SMART goals allowed");
+            throw new ConflictException("Maximum 5 SMART goals allowed");
         }
 
-        goal.setPerformanceCycle(activeCycle);
-        goal.setQuarter(quarter);
-        goal.setGoalType(GoalType.SMART);
-        goal.setStatus(GoalStatus.DRAFT);
+        Goal newGoal = modelMapper.map(goal, Goal.class);
+        newGoal.setPerformanceCycle(activeCycle);
+        newGoal.setQuarter(quarter);
+        newGoal.setGoalType(GoalType.SMART);
+        newGoal.setStatus(GoalStatus.DRAFT);
 
-        return goalRepository.save(goal);
+        return goalRepository.save(newGoal);
     }
 
     @Override
     public List<Goal> getSmartGoalsByEmployee(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         return goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 employeeId,
@@ -198,8 +245,15 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void submitSmartGoals(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 employeeId,
@@ -209,11 +263,11 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No SMART goals found to submit");
+            throw new ResourceNotFoundException("No SMART goals found to submit");
         }
 
         if (goals.size() > 5) {
-            throw new BusinessException("Maximum 5 SMART goals allowed");
+            throw new ConflictException("Maximum 5 SMART goals allowed");
         }
 
         int totalWeightage = goals.stream()
@@ -221,7 +275,7 @@ public class GoalServiceImpl implements GoalService {
                 .sum();
 
         if (totalWeightage != 100) {
-            throw new BusinessException("Total weightage must be 100%");
+            throw new ConflictException("Total weightage must be 100%");
         }
 
         for (Goal goal : goals) {
@@ -231,28 +285,29 @@ public class GoalServiceImpl implements GoalService {
         goalRepository.saveAll(goals);
     }
 
-    // ================= DEVELOPMENT GOALS (EMPLOYEE) =================
-
     @Override
     public Goal saveDevelopmentGoal(Goal goal, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (goal == null) {
+            throw new ValidationException("Goal data is required");
         }
 
         if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
-            throw new BusinessException("Goal title is required");
+            throw new ValidationException("Goal title is required");
         }
 
         if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
-            throw new BusinessException("Weightage must be greater than 0");
+            throw new ValidationException("Weightage must be greater than 0");
         }
 
         long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
@@ -263,22 +318,30 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (count >= 5) {
-            throw new BusinessException("Maximum 5 development goals allowed");
+            throw new ConflictException("Maximum 5 development goals allowed");
         }
 
-        goal.setPerformanceCycle(activeCycle);
-        goal.setQuarter(quarter);
-        goal.setGoalType(GoalType.DEVELOPMENT);
-        goal.setStatus(GoalStatus.DRAFT);
+        Goal newGoal = modelMapper.map(goal, Goal.class);
+        newGoal.setPerformanceCycle(activeCycle);
+        newGoal.setQuarter(quarter);
+        newGoal.setGoalType(GoalType.DEVELOPMENT);
+        newGoal.setStatus(GoalStatus.DRAFT);
 
-        return goalRepository.save(goal);
+        return goalRepository.save(newGoal);
     }
 
     @Override
     public List<Goal> getDevelopmentGoalsByEmployee(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         return goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 employeeId,
@@ -291,8 +354,15 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void submitDevelopmentGoals(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 employeeId,
@@ -302,11 +372,11 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No development goals found to submit");
+            throw new ResourceNotFoundException("No development goals found to submit");
         }
 
         if (goals.size() > 5) {
-            throw new BusinessException("Maximum 5 development goals allowed");
+            throw new ConflictException("Maximum 5 development goals allowed");
         }
 
         int totalWeightage = goals.stream()
@@ -314,7 +384,7 @@ public class GoalServiceImpl implements GoalService {
                 .sum();
 
         if (totalWeightage != 100) {
-            throw new BusinessException("Total weightage must be 100%");
+            throw new ConflictException("Total weightage must be 100%");
         }
 
         for (Goal goal : goals) {
@@ -327,8 +397,15 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public List<String> getTeamEmployeesByManager(String managerId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new ValidationException("Manager ID is required");
+        }
 
         List<Goal> goals = goalRepository.findByManagerIdAndPerformanceCycleAndQuarter(
                 managerId,
@@ -345,8 +422,19 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public List<Goal> getGoalsForManagerReview(String managerId, String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new ValidationException("Manager ID is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         return goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarter(
                 managerId,
@@ -359,11 +447,15 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public Goal updateManagerReview(Long goalId, Integer rating, String comment) {
 
+        if (goalId == null) {
+            throw new ValidationException("Goal ID is required");
+        }
+
         Goal goal = goalRepository.findById(goalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalId));
 
         if (rating == null || rating < 1 || rating > 5) {
-            throw new BusinessException("Manager rating must be between 1 and 5");
+            throw new ValidationException("Manager rating must be between 1 and 5");
         }
 
         goal.setManagerRating(rating);
@@ -377,8 +469,19 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void submitManagerReviewToEmployee(String managerId, String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (managerId == null || managerId.trim().isEmpty()) {
+            throw new ValidationException("Manager ID is required");
+        }
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
 
         List<Goal> goals = goalRepository.findByManagerIdAndEmployeeIdAndPerformanceCycleAndQuarterAndGoalTypeIn(
                 managerId,
@@ -389,12 +492,12 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No SMART/DEVELOPMENT goals found to submit");
+            throw new ResourceNotFoundException("No SMART/DEVELOPMENT goals found to submit");
         }
 
         for (Goal goal : goals) {
             if (goal.getManagerRating() == null) {
-                throw new BusinessException("Manager rating is required before submission");
+                throw new ValidationException("Manager rating is required before submission");
             }
             goal.setStatus(GoalStatus.SENT_TO_EMPLOYEE);
             goal.setSubmittedToEmployeeAt(LocalDateTime.now());
@@ -406,15 +509,14 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public List<Goal> getPendingGoalsForAcceptance(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
         }
 
         if (employeeId == null || employeeId.trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
@@ -425,7 +527,7 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No goals pending for acceptance");
+            throw new ResourceNotFoundException("No goals pending for acceptance");
         }
 
         return goals;
@@ -434,15 +536,14 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void acceptReviewedGoals(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
         }
 
         if (employeeId == null || employeeId.trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
@@ -453,7 +554,7 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No goals found for acceptance");
+            throw new ResourceNotFoundException("No goals found for acceptance");
         }
 
         for (Goal goal : goals) {
@@ -466,15 +567,14 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public void finalSubmitToHR(String employeeId, Quarter quarter) {
 
-        PerformanceCycle activeCycle = cycleRepository.findByStatus(CycleStatus.PUBLISHED)
-                .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
+        PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
         }
 
         if (employeeId == null || employeeId.trim().isEmpty()) {
-            throw new BusinessException("Employee ID is required");
+            throw new ValidationException("Employee ID is required");
         }
 
         List<Goal> goals = goalRepository.findByEmployeeIdAndPerformanceCycleAndQuarterAndStatus(
@@ -485,7 +585,7 @@ public class GoalServiceImpl implements GoalService {
         );
 
         if (goals.isEmpty()) {
-            throw new BusinessException("No accepted goals found to submit to HR");
+            throw new ResourceNotFoundException("No accepted goals found to submit to HR");
         }
 
         for (Goal goal : goals) {

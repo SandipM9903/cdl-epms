@@ -3,29 +3,37 @@ package com.cdl.epms.model;
 import com.cdl.epms.common.enums.CycleType;
 import com.cdl.epms.common.enums.EmailerStatus;
 import jakarta.persistence.*;
-import lombok.Data;
+import jakarta.validation.constraints.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
 @Entity
 @Table(name = "emailer")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Emailer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "Cycle type cannot be null.")
     @Enumerated(EnumType.STRING)
     @Column(name = "cycle_type", nullable = false)
     private CycleType cycleType;
 
+    @NotBlank(message = "Subject cannot be empty.")
     @Column(name = "subject", nullable = false)
     private String subject;
 
+    @NotBlank(message = "Content cannot be empty.")
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
+    @NotNull(message = "Emailer status cannot be null.")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private EmailerStatus status;
@@ -41,8 +49,12 @@ public class Emailer {
 
     @PrePersist
     public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.status = EmailerStatus.DRAFT;
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.status == null) {
+            this.status = EmailerStatus.DRAFT;
+        }
     }
 
     @PreUpdate

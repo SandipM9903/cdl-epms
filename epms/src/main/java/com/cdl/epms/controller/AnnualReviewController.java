@@ -5,7 +5,10 @@ import com.cdl.epms.dto.annualReview.AnnualManagerReviewRequestDto;
 import com.cdl.epms.dto.annualReview.AnnualReviewRequestDto;
 import com.cdl.epms.model.AnnualReview;
 import com.cdl.epms.model.Goal;
+import com.cdl.epms.payload.ApiResponse;
 import com.cdl.epms.service.services.AnnualReviewService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,37 +17,53 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/annual-review")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class AnnualReviewController {
 
     private final AnnualReviewService annualReviewService;
 
-    public AnnualReviewController(AnnualReviewService annualReviewService) {
-        this.annualReviewService = annualReviewService;
-    }
-
     @GetMapping("/goals/{employeeId}/{year}")
-    public ResponseEntity<List<Goal>> getAnnualGoals(
+    public ResponseEntity<ApiResponse<List<Goal>>> getAnnualGoals(
             @PathVariable String employeeId,
             @PathVariable Integer year
     ) {
-        return ResponseEntity.ok(annualReviewService.getAnnualGoals(employeeId, year));
+
+        List<Goal> goals = annualReviewService.getAnnualGoals(employeeId, year);
+
+        ApiResponse<List<Goal>> response = ApiResponse.<List<Goal>>builder()
+                .success(true)
+                .message("Annual goals fetched successfully")
+                .data(goals)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/submit/{employeeId}")
-    public ResponseEntity<AnnualReview> submitSelfReview(
+    public ResponseEntity<ApiResponse<AnnualReview>> submitSelfReview(
             @PathVariable String employeeId,
-            @RequestBody AnnualReviewRequestDto dto
+            @Valid @RequestBody AnnualReviewRequestDto dto
     ) {
-        return ResponseEntity.ok(annualReviewService.submitSelfReview(employeeId, dto));
+
+        AnnualReview annualReview = annualReviewService.submitSelfReview(employeeId, dto);
+
+        ApiResponse<AnnualReview> response = ApiResponse.<AnnualReview>builder()
+                .success(true)
+                .message("Self review submitted successfully")
+                .data(annualReview)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/manager-review/{managerId}/{employeeId}")
-    public ResponseEntity<AnnualReview> managerReview(
+    public ResponseEntity<ApiResponse<AnnualReview>> managerReview(
             @PathVariable String managerId,
             @PathVariable String employeeId,
-            @RequestBody AnnualManagerReviewRequestDto dto
+            @Valid @RequestBody AnnualManagerReviewRequestDto dto
     ) {
-        AnnualReview updated = annualReviewService.updateManagerReview(
+
+        AnnualReview updatedReview = annualReviewService.updateManagerReview(
                 managerId,
                 employeeId,
                 dto.getYear(),
@@ -52,25 +71,47 @@ public class AnnualReviewController {
                 dto.getManagerComment()
         );
 
-        return ResponseEntity.ok(updated);
+        ApiResponse<AnnualReview> response = ApiResponse.<AnnualReview>builder()
+                .success(true)
+                .message("Manager review updated successfully")
+                .data(updatedReview)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/submit-to-employee/{managerId}/{employeeId}")
-    public ResponseEntity<String> submitToEmployee(
+    public ResponseEntity<ApiResponse<String>> submitToEmployee(
             @PathVariable String managerId,
             @PathVariable String employeeId,
-            @RequestBody AnnualManagerReviewRequestDto dto
+            @Valid @RequestBody AnnualManagerReviewRequestDto dto
     ) {
+
         annualReviewService.submitToEmployee(managerId, employeeId, dto.getYear());
-        return ResponseEntity.ok("Annual review submitted to employee successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Annual review submitted to employee successfully")
+                .data("Submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/final-submit/{employeeId}")
-    public ResponseEntity<String> finalSubmitToHR(
+    public ResponseEntity<ApiResponse<String>> finalSubmitToHR(
             @PathVariable String employeeId,
-            @RequestBody AnnualFinalSubmitRequestDto dto
+            @Valid @RequestBody AnnualFinalSubmitRequestDto dto
     ) {
+
         annualReviewService.finalSubmitToHR(employeeId, dto.getYear());
-        return ResponseEntity.ok("Annual review final submitted to HR successfully");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Annual review final submitted to HR successfully")
+                .data("Final submitted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

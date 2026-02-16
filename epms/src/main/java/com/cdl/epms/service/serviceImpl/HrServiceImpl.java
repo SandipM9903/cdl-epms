@@ -5,31 +5,29 @@ import com.cdl.epms.common.enums.GoalType;
 import com.cdl.epms.common.enums.Quarter;
 import com.cdl.epms.dto.hr.HrDashboardResponseDto;
 import com.cdl.epms.dto.hr.HrProgressStatusResponseDto;
-import com.cdl.epms.exception.BusinessException;
 import com.cdl.epms.exception.ResourceNotFoundException;
+import com.cdl.epms.exception.ValidationException;
 import com.cdl.epms.model.PerformanceCycle;
 import com.cdl.epms.repository.GoalRepository;
 import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.HrService;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class HrServiceImpl implements HrService {
 
     private final GoalRepository goalRepository;
     private final PerformanceCycleRepository cycleRepository;
-
-    public HrServiceImpl(GoalRepository goalRepository,
-                         PerformanceCycleRepository cycleRepository) {
-        this.goalRepository = goalRepository;
-        this.cycleRepository = cycleRepository;
-    }
+    private final ModelMapper modelMapper;
 
     @Override
     public HrProgressStatusResponseDto getProgressStatus(Quarter quarter) {
 
         if (quarter == null) {
-            throw new BusinessException("Quarter is required");
+            throw new ValidationException("Quarter is required");
         }
 
         HrProgressStatusResponseDto dto = new HrProgressStatusResponseDto();
@@ -50,19 +48,20 @@ public class HrServiceImpl implements HrService {
     public HrDashboardResponseDto getDashboard(Long cycleId) {
 
         if (cycleId == null) {
-            throw new BusinessException("Cycle ID is required");
+            throw new ValidationException("Cycle ID is required");
         }
 
         PerformanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cycle not found with id: " + cycleId));
 
-        HrDashboardResponseDto dto = new HrDashboardResponseDto();
+        HrDashboardResponseDto dto = modelMapper.map(cycle, HrDashboardResponseDto.class);
 
         dto.setCycleId(cycle.getId());
         dto.setYear(cycle.getYear());
         dto.setCycleType(cycle.getCycleType().name());
-        dto.setQuarter(cycle.getQuarter().name());
         dto.setStatus(cycle.getStatus().name());
+
+        dto.setQuarter(cycle.getQuarter() != null ? cycle.getQuarter().name() : null);
 
         dto.setTotalGoals(goalRepository.countByPerformanceCycle_Id(cycleId));
 

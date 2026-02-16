@@ -2,8 +2,10 @@ package com.cdl.epms.controller;
 
 import com.cdl.epms.dto.cycle.CreateCycleRequestDto;
 import com.cdl.epms.model.PerformanceCycle;
+import com.cdl.epms.payload.ApiResponse;
 import com.cdl.epms.service.services.CycleService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,19 +13,17 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/cycles")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class CycleController {
 
     private final CycleService cycleService;
 
-    public CycleController(CycleService cycleService) {
-        this.cycleService = cycleService;
-    }
-
     @PostMapping
-    public ResponseEntity<PerformanceCycle> save(
+    public ResponseEntity<ApiResponse<PerformanceCycle>> save(
             @Valid @RequestBody CreateCycleRequestDto requestDto
     ) {
-        PerformanceCycle saved = cycleService.createCycle(
+
+        PerformanceCycle savedCycle = cycleService.createCycle(
                 requestDto.getCycleType(),
                 requestDto.getYear(),
                 requestDto.getQuarter(),
@@ -31,24 +31,54 @@ public class CycleController {
                 requestDto.getEndDate()
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        ApiResponse<PerformanceCycle> response = ApiResponse.<PerformanceCycle>builder()
+                .success(true)
+                .message("Performance cycle created successfully")
+                .data(savedCycle)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}/publish")
-    public ResponseEntity<String> publish(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> publish(@PathVariable Long id) {
+
         String message = cycleService.publishCycle(id);
-        return ResponseEntity.ok(message);
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Performance cycle published successfully")
+                .data(message)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/active")
-    public ResponseEntity<PerformanceCycle> findActive() {
-        return ResponseEntity.ok(cycleService.getActiveCycle());
+    public ResponseEntity<ApiResponse<PerformanceCycle>> findActive() {
+
+        PerformanceCycle activeCycle = cycleService.getActiveCycle();
+
+        ApiResponse<PerformanceCycle> response = ApiResponse.<PerformanceCycle>builder()
+                .success(true)
+                .message("Active performance cycle fetched successfully")
+                .data(activeCycle)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/close")
-    public ResponseEntity<String> close(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> close(@PathVariable Long id) {
+
         cycleService.closeCycle(id);
-        return ResponseEntity.ok("Performance cycle closed successfully.");
+
+        ApiResponse<String> response = ApiResponse.<String>builder()
+                .success(true)
+                .message("Performance cycle closed successfully")
+                .data("Performance cycle closed successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }
-
