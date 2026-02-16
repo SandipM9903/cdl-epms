@@ -805,9 +805,6 @@ GET		:	http://localhost:9010/api/reports/detailed-goals-qwise?year=2025&quarter=
 
 ==============================================================================================================================
 
-
-
-PENDING APIS
 🔥 HR DASHBOARD / PROGRESS STATUS (Pending)
 20) HR Progress APIs
 
