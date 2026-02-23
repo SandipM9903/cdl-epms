@@ -76,7 +76,7 @@ public class NotificationController {
 
         ApiResponse<String> response = ApiResponse.<String>builder()
                 .success(true)
-                .message("Emailer published successfully")
+                .message("Emailer ACTIVE successfully")
                 .data(message)
                 .build();
 

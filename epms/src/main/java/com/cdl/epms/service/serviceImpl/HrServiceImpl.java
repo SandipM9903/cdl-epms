@@ -33,7 +33,7 @@ public class HrServiceImpl implements HrService {
         HrProgressStatusResponseDto dto = new HrProgressStatusResponseDto();
         dto.setQuarter(quarter.name());
 
-        dto.setDraftCount(goalRepository.countByQuarterAndStatus(quarter, GoalStatus.DRAFT));
+        dto.setNOT_STARTEDCount(goalRepository.countByQuarterAndStatus(quarter, GoalStatus.NOT_STARTED));
         dto.setPredefinedSubmittedCount(goalRepository.countByQuarterAndStatus(quarter, GoalStatus.PREDEFINED_SUBMITTED));
         dto.setSubmittedToManagerCount(goalRepository.countByQuarterAndStatus(quarter, GoalStatus.SUBMITTED_TO_MANAGER));
         dto.setManagerReviewedCount(goalRepository.countByQuarterAndStatus(quarter, GoalStatus.MANAGER_REVIEWED));

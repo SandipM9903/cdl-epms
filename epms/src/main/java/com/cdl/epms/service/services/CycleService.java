@@ -5,6 +5,7 @@ import com.cdl.epms.common.enums.Quarter;
 import com.cdl.epms.model.PerformanceCycle;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface CycleService {
 
@@ -12,6 +13,7 @@ public interface CycleService {
             CycleType cycleType,
             Integer year,
             Quarter quarter,
+            Integer reminderDays,
             LocalDate startDate,
             LocalDate endDate
     );
@@ -21,4 +23,6 @@ public interface CycleService {
     PerformanceCycle getActiveCycle();
 
     void closeCycle(Long cycleId);
+
+    List<PerformanceCycle> getCyclesByYear(Integer year);
 }

@@ -9,11 +9,14 @@ import com.cdl.epms.exception.ValidationException;
 import com.cdl.epms.model.PerformanceCycle;
 import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.CycleService;
+import com.cdl.epms.service.services.EmailerService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -22,12 +25,14 @@ public class CycleServiceImpl implements CycleService {
 
     private final PerformanceCycleRepository cycleRepository;
     private final ModelMapper modelMapper;
+    private final EmailerService emailerService;
 
     @Override
     public PerformanceCycle createCycle(
             CycleType cycleType,
             Integer year,
             Quarter quarter,
+            Integer reminderDays,
             LocalDate startDate,
             LocalDate endDate
     ) {
@@ -50,13 +55,15 @@ public class CycleServiceImpl implements CycleService {
         cycle.setCycleType(cycleType);
         cycle.setYear(year);
         cycle.setQuarter(quarter);
+        cycle.setReminderDays(reminderDays);
         cycle.setStartDate(startDate);
         cycle.setEndDate(endDate);
-        cycle.setStatus(CycleStatus.DRAFT);
+        cycle.setStatus(CycleStatus.NOT_STARTED);
 
         return cycleRepository.save(cycle);
     }
 
+    @Transactional
     @Override
     public String publishCycle(Long cycleId) {
 
@@ -67,24 +74,32 @@ public class CycleServiceImpl implements CycleService {
         PerformanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cycle not found"));
 
-        if (cycle.getStatus() != CycleStatus.DRAFT) {
-            throw new ConflictException("Only DRAFT cycles can be published");
+        if (cycle.getStatus() != CycleStatus.NOT_STARTED) {
+            throw new ConflictException("Only NOT_STARTED cycles can be ACTIVE");
         }
 
-        if (cycleRepository.existsByStatus(CycleStatus.PUBLISHED)) {
+        if (cycleRepository.existsByStatus(CycleStatus.ACTIVE)) {
             throw new ConflictException("Another performance cycle is already active");
         }
 
-        cycle.setStatus(CycleStatus.PUBLISHED);
+        cycle.setStatus(CycleStatus.ACTIVE);
+        cycle.setPublishedDate(LocalDate.now());
+
         cycleRepository.save(cycle);
 
-        return "Performance cycle published successfully. This cycle is now active.";
+        try {
+            emailerService.publishEmailer(cycle.getCycleType());
+        } catch (Exception e) {
+            System.err.println("Email sending failed: " + e.getMessage());
+        }
+
+        return "Performance cycle ACTIVE successfully and launch email sent.";
     }
 
     @Override
     public PerformanceCycle getActiveCycle() {
 
-        return cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+        return cycleRepository.findByStatus(CycleStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
     }
 
@@ -98,8 +113,8 @@ public class CycleServiceImpl implements CycleService {
         PerformanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cycle not found"));
 
-        if (cycle.getStatus() != CycleStatus.PUBLISHED) {
-            throw new ConflictException("Only PUBLISHED cycles can be closed");
+        if (cycle.getStatus() != CycleStatus.ACTIVE) {
+            throw new ConflictException("Only ACTIVE cycles can be closed");
         }
 
         cycle.setStatus(CycleStatus.CLOSED);
@@ -141,5 +156,10 @@ public class CycleServiceImpl implements CycleService {
         if (cycleType == CycleType.ANNUAL && quarter != null) {
             throw new ValidationException("Quarter should not be provided for annual cycle");
         }
+    }
+
+    @Override
+    public List<PerformanceCycle> getCyclesByYear(Integer year) {
+        return cycleRepository.findByYear(year);
     }
 }

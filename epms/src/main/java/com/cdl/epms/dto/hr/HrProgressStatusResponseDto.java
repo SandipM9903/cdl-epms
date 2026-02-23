@@ -7,7 +7,7 @@ public class HrProgressStatusResponseDto {
 
     private String quarter;
 
-    private long draftCount;
+    private long NOT_STARTEDCount;
     private long predefinedSubmittedCount;
     private long submittedToManagerCount;
     private long managerReviewedCount;

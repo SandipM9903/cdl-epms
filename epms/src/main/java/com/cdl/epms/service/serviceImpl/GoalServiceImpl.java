@@ -28,7 +28,7 @@ public class GoalServiceImpl implements GoalService {
     private final ModelMapper modelMapper;
 
     private PerformanceCycle getActiveCycle() {
-        return cycleRepository.findByStatus(CycleStatus.PUBLISHED)
+        return cycleRepository.findByStatus(CycleStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("No active cycle found"));
     }
 
@@ -76,7 +76,7 @@ public class GoalServiceImpl implements GoalService {
         newGoal.setPerformanceCycle(activeCycle);
         newGoal.setQuarter(quarter);
         newGoal.setGoalType(GoalType.PREDEFINED);
-        newGoal.setStatus(GoalStatus.DRAFT);
+        newGoal.setStatus(GoalStatus.NOT_STARTED);
 
         return goalRepository.save(newGoal);
     }
@@ -216,7 +216,7 @@ public class GoalServiceImpl implements GoalService {
         newGoal.setPerformanceCycle(activeCycle);
         newGoal.setQuarter(quarter);
         newGoal.setGoalType(GoalType.SMART);
-        newGoal.setStatus(GoalStatus.DRAFT);
+        newGoal.setStatus(GoalStatus.NOT_STARTED);
 
         return goalRepository.save(newGoal);
     }
@@ -325,7 +325,7 @@ public class GoalServiceImpl implements GoalService {
         newGoal.setPerformanceCycle(activeCycle);
         newGoal.setQuarter(quarter);
         newGoal.setGoalType(GoalType.DEVELOPMENT);
-        newGoal.setStatus(GoalStatus.DRAFT);
+        newGoal.setStatus(GoalStatus.NOT_STARTED);
 
         return goalRepository.save(newGoal);
     }

@@ -13,4 +13,6 @@ public interface EmailerService {
     EmailerResponseDto previewEmailer(Long id);
 
     String publishEmailer(CycleType cycleType);
+
+    void sendReminderEmail(CycleType cycleType);
 }

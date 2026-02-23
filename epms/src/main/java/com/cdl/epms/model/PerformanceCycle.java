@@ -49,6 +49,11 @@ public class PerformanceCycle {
     @Column(name = "status", nullable = false)
     private CycleStatus status;
 
+    @Column(name = "reminder_days")
+    private Integer reminderDays;
+
+    private LocalDate publishedDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -58,7 +63,7 @@ public class PerformanceCycle {
             this.createdAt = LocalDateTime.now();
         }
         if (this.status == null) {
-            this.status = CycleStatus.DRAFT;
+            this.status = CycleStatus.NOT_STARTED;
         }
     }
 }

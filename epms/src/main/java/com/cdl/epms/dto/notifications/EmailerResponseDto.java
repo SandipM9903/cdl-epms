@@ -17,5 +17,5 @@ public class EmailerResponseDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private LocalDateTime publishedAt;
+    private LocalDateTime activeAt;
 }

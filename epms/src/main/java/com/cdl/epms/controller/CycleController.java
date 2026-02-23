@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/cycles")
 @CrossOrigin(origins = "*")
@@ -27,6 +29,7 @@ public class CycleController {
                 requestDto.getCycleType(),
                 requestDto.getYear(),
                 requestDto.getQuarter(),
+                requestDto.getReminderDays(),
                 requestDto.getStartDate(),
                 requestDto.getEndDate()
         );
@@ -47,7 +50,7 @@ public class CycleController {
 
         ApiResponse<String> response = ApiResponse.<String>builder()
                 .success(true)
-                .message("Performance cycle published successfully")
+                .message("Performance cycle ACTIVE successfully")
                 .data(message)
                 .build();
 
@@ -77,6 +80,22 @@ public class CycleController {
                 .success(true)
                 .message("Performance cycle closed successfully")
                 .data("Performance cycle closed successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PerformanceCycle>>> getByYear(
+            @RequestParam Integer year
+    ) {
+
+        List<PerformanceCycle> cycles = cycleService.getCyclesByYear(year);
+
+        ApiResponse<List<PerformanceCycle>> response = ApiResponse.<List<PerformanceCycle>>builder()
+                .success(true)
+                .message("Performance cycles fetched successfully")
+                .data(cycles)
                 .build();
 
         return ResponseEntity.ok(response);

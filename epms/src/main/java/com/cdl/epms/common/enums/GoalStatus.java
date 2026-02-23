@@ -1,7 +1,7 @@
 package com.cdl.epms.common.enums;
 
 public enum GoalStatus {
-    DRAFT,
+    NOT_STARTED,
     PREDEFINED_SUBMITTED,
     SUBMITTED_TO_MANAGER,
     MANAGER_REVIEWED,

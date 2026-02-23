@@ -6,6 +6,7 @@ import com.cdl.epms.common.enums.CycleType;
 import com.cdl.epms.common.enums.Quarter;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PerformanceCycleRepository extends JpaRepository<PerformanceCycle, Long> {
@@ -19,4 +20,6 @@ public interface PerformanceCycleRepository extends JpaRepository<PerformanceCyc
             Quarter quarter,
             CycleType cycleType
     );
+
+    List<PerformanceCycle> findByYear(Integer year);
 }

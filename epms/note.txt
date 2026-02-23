@@ -24,11 +24,11 @@ PMS_REQUIREMENT_Jan 26
 2) PUT : http://localhost:9010/api/cycles/1/publish
 Why we created this API?
 
-To make the created cycle ACTIVE (Published).
+To make the created cycle ACTIVE (ACTIVE).
 
 How it helps?
 
-Once published:
+Once ACTIVE:
 
 Users can start goal setting
 
@@ -269,7 +269,7 @@ PPT Requirement (Copy)
 PMS_REQUIREMENT_Jan 26
 
 
-“SAVE DRAFT / SUBMIT TO R1”
+“SAVE NOT_STARTED / SUBMIT TO R1”
 
 ==========================================================================================================
 
@@ -283,9 +283,9 @@ How it helps?
 
 Employee can add development goals like certification, training, learning plan etc.
 
-Saves the development goal as Draft.
+Saves the development goal as NOT_STARTED.
 
-Supports incremental goal creation (SAVE DRAFT concept).
+Supports incremental goal creation (SAVE NOT_STARTED concept).
 
 Requirement mentioned in PPT?
 
@@ -313,7 +313,7 @@ Displays development goals in Employee UI screen.
 
 Employee can review/edit goals before submitting to Manager.
 
-Needed for showing already saved draft goals.
+Needed for showing already saved NOT_STARTED goals.
 
 Requirement mentioned in PPT?
 
@@ -342,7 +342,7 @@ Validates max 5 goals.
 
 Validates total weightage must be 100%.
 
-Changes goal status from DRAFT → SUBMITTED_TO_MANAGER.
+Changes goal status from NOT_STARTED → SUBMITTED_TO_MANAGER.
 
 After submission, Manager can view it in My Team section.
 
@@ -353,7 +353,7 @@ Requirement mentioned in PPT?
 PPT Requirement (Copy)
 
 “– a maximum of 5 Development goals & plans can be added”
-“SAVE DRAFT / SUBMIT”
+“SAVE NOT_STARTED / SUBMIT”
 “– a maximum of 5 goals can be added, and the total weightage must equal 100%.”
 
 (PMS_REQUIREMENT_Jan 26)

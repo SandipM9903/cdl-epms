@@ -44,8 +44,8 @@ public class Emailer {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "published_at")
-    private LocalDateTime publishedAt;
+    @Column(name = "active_at")
+    private LocalDateTime activeAt;
 
     @PrePersist
     public void onCreate() {
@@ -53,7 +53,7 @@ public class Emailer {
             this.createdAt = LocalDateTime.now();
         }
         if (this.status == null) {
-            this.status = EmailerStatus.DRAFT;
+            this.status = EmailerStatus.NOT_STARTED;
         }
     }
 

@@ -17,7 +17,11 @@ public class CreateCycleRequestDto {
     private Integer year;
 
     // Nullable for ANNUAL
+    @NotNull
     private Quarter quarter;
+
+    @NotNull
+    private Integer reminderDays;
 
     @NotNull
     private LocalDate startDate;

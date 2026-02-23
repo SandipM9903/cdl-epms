@@ -86,7 +86,7 @@ public class Goal {
             this.createdAt = LocalDateTime.now();
         }
         if (this.status == null) {
-            this.status = GoalStatus.DRAFT;
+            this.status = GoalStatus.NOT_STARTED;
         }
     }
 }
