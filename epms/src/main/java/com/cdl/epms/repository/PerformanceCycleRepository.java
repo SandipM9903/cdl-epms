@@ -13,6 +13,8 @@ public interface PerformanceCycleRepository extends JpaRepository<PerformanceCyc
 
     Optional<PerformanceCycle> findByStatus(CycleStatus status);
 
+    List<PerformanceCycle> findAllByStatus(CycleStatus status);   // ADD THIS
+
     boolean existsByStatus(CycleStatus status);
 
     Optional<PerformanceCycle> findByYearAndQuarterAndCycleType(

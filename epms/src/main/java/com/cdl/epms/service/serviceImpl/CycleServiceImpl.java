@@ -88,9 +88,10 @@ public class CycleServiceImpl implements CycleService {
         cycleRepository.save(cycle);
 
         try {
+            System.out.println("Publishing email for cycle: " + cycle.getCycleType());
             emailerService.publishEmailer(cycle.getCycleType());
         } catch (Exception e) {
-            System.err.println("Email sending failed: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return "Performance cycle ACTIVE successfully and launch email sent.";

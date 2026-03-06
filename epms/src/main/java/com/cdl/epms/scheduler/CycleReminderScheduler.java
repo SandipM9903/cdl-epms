@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Component
@@ -18,31 +19,55 @@ public class CycleReminderScheduler {
     private final PerformanceCycleRepository cycleRepository;
     private final EmailerService emailerService;
 
-    @Scheduled(cron = "0 0 9 * * ?") // Every day at 9AM
+    // Every day at 9AM
+    @Scheduled(cron = "0 0 9 * * ?")
     public void sendReminderEmails() {
 
-        List<PerformanceCycle> activeCycles =
-                cycleRepository.findByStatus(CycleStatus.ACTIVE)
-                        .stream()
-                        .toList();
+        LocalDate today = LocalDate.now();
 
-        for (PerformanceCycle cycle : activeCycles) {
+        System.out.println("Scheduler running: " + today);
 
-            if (cycle.getReminderDays() == null) continue;
+        List<PerformanceCycle> cycles =
+                cycleRepository.findAllByStatus(CycleStatus.ACTIVE);
 
-            if (LocalDate.now().isAfter(cycle.getEndDate())) continue;
+        for (PerformanceCycle cycle : cycles) {
 
-            if (cycle.getPublishedDate() == null) continue;
+            if (cycle.getPublishedDate() == null ||
+                    cycle.getEndDate() == null ||
+                    cycle.getReminderDays() == null) {
+                continue;
+            }
 
             long daysSincePublished =
-                    java.time.temporal.ChronoUnit.DAYS.between(
-                            cycle.getPublishedDate(),
-                            LocalDate.now()
-                    );
+                    ChronoUnit.DAYS.between(cycle.getPublishedDate(), today);
 
-            if (daysSincePublished > 0 &&
-                    daysSincePublished % cycle.getReminderDays() == 0) {
+            long daysUntilExpiry =
+                    ChronoUnit.DAYS.between(today, cycle.getEndDate());
+
+            // -------- FINAL REMINDER (Priority) --------
+            if (daysUntilExpiry == 1) {
+
+                System.out.println("Final reminder for cycle: " + cycle.getId());
                 emailerService.sendReminderEmail(cycle.getCycleType());
+                continue;
+            }
+
+            // -------- PERIODIC REMINDER --------
+            if (daysSincePublished > 0 &&
+                    daysSincePublished % cycle.getReminderDays() == 0 &&
+                    today.isBefore(cycle.getEndDate())) {
+
+                System.out.println("Periodic reminder for cycle: " + cycle.getId());
+                emailerService.sendReminderEmail(cycle.getCycleType());
+            }
+
+            // -------- AUTO CLOSE --------
+            if (!today.isBefore(cycle.getEndDate())) {
+
+                cycle.setStatus(CycleStatus.CLOSED);
+                cycleRepository.save(cycle);
+
+                System.out.println("Cycle auto closed: " + cycle.getId());
             }
         }
     }
