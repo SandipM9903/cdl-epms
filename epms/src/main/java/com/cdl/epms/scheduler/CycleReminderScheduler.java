@@ -1,6 +1,7 @@
 package com.cdl.epms.scheduler;
 
 import com.cdl.epms.common.enums.CycleStatus;
+import com.cdl.epms.common.enums.EmailTemplateType;
 import com.cdl.epms.model.PerformanceCycle;
 import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.EmailerService;
@@ -19,7 +20,7 @@ public class CycleReminderScheduler {
     private final PerformanceCycleRepository cycleRepository;
     private final EmailerService emailerService;
 
-    // Every day at 9AM
+    // Runs every day at 9 AM
     @Scheduled(cron = "0 0 9 * * ?")
     public void sendReminderEmails() {
 
@@ -44,11 +45,16 @@ public class CycleReminderScheduler {
             long daysUntilExpiry =
                     ChronoUnit.DAYS.between(today, cycle.getEndDate());
 
-            // -------- FINAL REMINDER (Priority) --------
+            // -------- FINAL REMINDER (1 day before expiry) --------
             if (daysUntilExpiry == 1) {
 
                 System.out.println("Final reminder for cycle: " + cycle.getId());
-                emailerService.sendReminderEmail(cycle.getCycleType());
+
+                emailerService.sendEmailByTemplate(
+                        cycle.getCycleType(),
+                        EmailTemplateType.EXPIRY
+                );
+
                 continue;
             }
 
@@ -58,7 +64,11 @@ public class CycleReminderScheduler {
                     today.isBefore(cycle.getEndDate())) {
 
                 System.out.println("Periodic reminder for cycle: " + cycle.getId());
-                emailerService.sendReminderEmail(cycle.getCycleType());
+
+                emailerService.sendEmailByTemplate(
+                        cycle.getCycleType(),
+                        EmailTemplateType.REMINDER
+                );
             }
 
             // -------- AUTO CLOSE --------

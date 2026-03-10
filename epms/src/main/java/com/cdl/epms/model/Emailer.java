@@ -1,6 +1,7 @@
 package com.cdl.epms.model;
 
 import com.cdl.epms.common.enums.CycleType;
+import com.cdl.epms.common.enums.EmailTemplateType;
 import com.cdl.epms.common.enums.EmailerStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -37,6 +38,10 @@ public class Emailer {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private EmailerStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EmailTemplateType templateType;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

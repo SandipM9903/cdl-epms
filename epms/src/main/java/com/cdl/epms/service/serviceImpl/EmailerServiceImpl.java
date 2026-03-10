@@ -1,6 +1,7 @@
 package com.cdl.epms.service.serviceImpl;
 
 import com.cdl.epms.common.enums.CycleType;
+import com.cdl.epms.common.enums.EmailTemplateType;
 import com.cdl.epms.common.enums.EmailerStatus;
 import com.cdl.epms.dto.notifications.EmailerRequestDto;
 import com.cdl.epms.dto.notifications.EmailerResponseDto;
@@ -14,20 +15,23 @@ import com.cdl.epms.service.services.EmailerService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailerServiceImpl implements EmailerService {
 
     private final EmailerRepository emailerRepository;
@@ -36,11 +40,44 @@ public class EmailerServiceImpl implements EmailerService {
     private final ModelMapper modelMapper;
     private final TemplateEngine templateEngine;
 
-    private static final String EMPLOYEE_API_URL = "http://localhost:9020/api/v1/employees";
-    private static final String FROM_EMAIL = "m.harikascm@gmail.com";
+    @Value("${employee.api.url:http://localhost:9020/api/v1/employees}")
+    private String employeeApiUrl;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
     private EmailerResponseDto mapToDto(Emailer emailer) {
         return modelMapper.map(emailer, EmailerResponseDto.class);
+    }
+
+    private Emailer getEmailer(CycleType cycleType,
+                               EmailTemplateType templateType,
+                               EmailerStatus status) {
+
+        return emailerRepository
+                .findByCycleTypeAndTemplateTypeAndStatus(cycleType, templateType, status)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Email template not found for cycle=" + cycleType +
+                                ", template=" + templateType +
+                                ", status=" + status));
+    }
+
+    private String getTemplateName(EmailTemplateType templateType) {
+
+        switch (templateType) {
+
+            case LAUNCH:
+                return "launch-email-template";
+
+            case REMINDER:
+                return "reminder-email-template";
+
+            case EXPIRY:
+                return "expiry-email-template";
+
+            default:
+                throw new ValidationException("Invalid template type");
+        }
     }
 
     @Override
@@ -54,70 +91,53 @@ public class EmailerServiceImpl implements EmailerService {
             throw new ValidationException("Cycle type is required");
         }
 
-        if (dto.getSubject() == null || dto.getSubject().trim().isEmpty()) {
+        if (dto.getSubject() == null || dto.getSubject().isBlank()) {
             throw new ValidationException("Email subject is required");
         }
 
-        if (dto.getContent() == null || dto.getContent().trim().isEmpty()) {
+        if (dto.getContent() == null || dto.getContent().isBlank()) {
             throw new ValidationException("Email content is required");
         }
 
         Emailer emailer = modelMapper.map(dto, Emailer.class);
+
         emailer.setStatus(EmailerStatus.NOT_STARTED);
         emailer.setCreatedAt(LocalDateTime.now());
         emailer.setUpdatedAt(LocalDateTime.now());
 
-        Emailer saved = emailerRepository.save(emailer);
-
-        return mapToDto(saved);
+        return mapToDto(emailerRepository.save(emailer));
     }
 
     @Override
     public EmailerResponseDto editEmailer(Long id, EmailerRequestDto dto) {
 
-        if (id == null) {
-            throw new ValidationException("Emailer ID is required");
-        }
-
-        if (dto == null) {
-            throw new ValidationException("Request body is required");
-        }
-
         Emailer emailer = emailerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Emailer not found with id: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Emailer not found with id: " + id));
 
         if (emailer.getStatus() == EmailerStatus.ACTIVE) {
             throw new ConflictException("ACTIVE emailer cannot be edited");
         }
 
-        if (dto.getSubject() != null && !dto.getSubject().trim().isEmpty()) {
+        if (dto.getSubject() != null && !dto.getSubject().isBlank()) {
             emailer.setSubject(dto.getSubject());
         }
 
-        if (dto.getContent() != null && !dto.getContent().trim().isEmpty()) {
+        if (dto.getContent() != null && !dto.getContent().isBlank()) {
             emailer.setContent(dto.getContent());
-        }
-
-        if (dto.getCycleType() != null) {
-            emailer.setCycleType(dto.getCycleType());
         }
 
         emailer.setUpdatedAt(LocalDateTime.now());
 
-        Emailer updated = emailerRepository.save(emailer);
-
-        return mapToDto(updated);
+        return mapToDto(emailerRepository.save(emailer));
     }
 
     @Override
     public EmailerResponseDto previewEmailer(Long id) {
 
-        if (id == null) {
-            throw new ValidationException("Emailer ID is required");
-        }
-
         Emailer emailer = emailerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Emailer not found with id: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Emailer not found with id: " + id));
 
         return mapToDto(emailer);
     }
@@ -125,155 +145,167 @@ public class EmailerServiceImpl implements EmailerService {
     @Override
     public String publishEmailer(CycleType cycleType) {
 
-        if (cycleType == null) {
-            throw new ValidationException("Cycle type is required");
-        }
+        log.info("Publishing email for cycle: {}", cycleType);
 
-        // 🔹 If already ACTIVE → don't resend
         Emailer activeEmailer = emailerRepository
-                .findByCycleTypeAndStatus(cycleType, EmailerStatus.ACTIVE)
+                .findByCycleTypeAndTemplateTypeAndStatus(
+                        cycleType,
+                        EmailTemplateType.LAUNCH,
+                        EmailerStatus.ACTIVE)
                 .orElse(null);
 
         if (activeEmailer != null) {
-            return "Email already sent for this cycle.";
+            log.info("Launch email already sent for cycle: {}", cycleType);
+            return "Launch email already sent for this cycle.";
         }
 
-        // 🔹 Get existing NOT_STARTED or create new
-        Emailer emailer = emailerRepository
-                .findByCycleTypeAndStatus(cycleType, EmailerStatus.NOT_STARTED)
-                .orElseGet(() -> {
-                    Emailer e = new Emailer();
-                    e.setCycleType(cycleType);
-                    e.setSubject("Performance Cycle " + cycleType + " Started");
-                    e.setContent("The " + cycleType +
-                            " performance cycle is now started. Please complete before expiry.");
-                    e.setStatus(EmailerStatus.NOT_STARTED);
-                    return emailerRepository.save(e);
-                });
-
-        EmployeeDto[] employeesArray =
-                restTemplate.getForObject(EMPLOYEE_API_URL, EmployeeDto[].class);
-
-        if (employeesArray == null || employeesArray.length == 0) {
-            return "No employees found.";
-        }
-
-        List<EmployeeDto> employees = Arrays.asList(employeesArray);
-
-        for (EmployeeDto employee : employees) {
-
-            if (employee.getEmpEmailId() == null ||
-                    employee.getEmpEmailId().trim().isEmpty()) {
-                continue;
-            }
-
-            try {
-                String employeeName = employee.getEmpName() != null
-                        ? employee.getEmpName()
-                        : "Employee";
-
-                Context context = new Context();
-                context.setVariable("employeeName", employeeName);
-                context.setVariable("subject", emailer.getSubject());
-                context.setVariable("cycleType", cycleType.toString());
-                context.setVariable("content",
-                        emailer.getContent().replace("\n", "<br>"));
-
-                String htmlTemplate =
-                        templateEngine.process("emailer-template", context);
-
-                sendHtmlEmail(
-                        employee.getEmpEmailId(),
-                        emailer.getSubject(),
-                        htmlTemplate
-                );
-
-            } catch (Exception ex) {
-                System.err.println("Failed to send to: "
-                        + employee.getEmpEmailId());
-            }
-        }
-
-        // 🔹 Mark as ACTIVE only once
-        emailer.setStatus(EmailerStatus.ACTIVE);
-        emailer.setActiveAt(LocalDateTime.now());
-        emailerRepository.save(emailer);
-
-        return "Launch email sent successfully.";
-    }
-
-    private void sendHtmlEmail(String toEmail, String subject, String htmlBody) {
+        Emailer emailer = getEmailer(
+                cycleType,
+                EmailTemplateType.LAUNCH,
+                EmailerStatus.NOT_STARTED);
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
+            // Send emails to employees
+            int emailsSent = sendEmailToEmployees(emailer, cycleType);
 
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(FROM_EMAIL);
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
+            // Update emailer status
+            emailer.setStatus(EmailerStatus.ACTIVE);
+            emailer.setActiveAt(LocalDateTime.now());
+            emailerRepository.save(emailer);
 
-            mailSender.send(message);
+            log.info("Successfully sent {} launch emails for cycle: {}", emailsSent, cycleType);
+            return String.format("Launch email sent successfully to %d employees.", emailsSent);
 
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send email to: " + toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send launch emails for cycle: {}", cycleType, e);
+            throw new RuntimeException("Failed to send launch emails: " + e.getMessage());
         }
     }
 
     @Override
     public void sendReminderEmail(CycleType cycleType) {
 
-        if (cycleType == null) {
-            throw new ValidationException("Cycle type is required");
-        }
+        log.info("Sending reminder email for cycle: {}", cycleType);
+
+        Emailer emailer = getEmailer(
+                cycleType,
+                EmailTemplateType.REMINDER,
+                EmailerStatus.ACTIVE);
+
+        sendEmailToEmployees(emailer, cycleType);
+    }
+
+    @Override
+    public EmailerResponseDto previewEmailerByType(CycleType cycleType,
+                                                   EmailTemplateType templateType) {
 
         Emailer emailer = emailerRepository
-                .findByCycleTypeAndStatus(cycleType, EmailerStatus.ACTIVE)
+                .findByCycleTypeAndTemplateTypeAndStatus(
+                        cycleType,
+                        templateType,
+                        EmailerStatus.ACTIVE)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "No ACTIVE emailer found for cycle type: " + cycleType
-                        )
-                );
+                                "Email template not found for cycle=" + cycleType +
+                                        ", template=" + templateType));
 
-        EmployeeDto[] employeesArray =
-                restTemplate.getForObject(EMPLOYEE_API_URL, EmployeeDto[].class);
+        return mapToDto(emailer);
+    }
 
-        if (employeesArray == null || employeesArray.length == 0) {
-            return; // No employees, no reminder
+    @Override
+    public String sendEmailByTemplate(CycleType cycleType,
+                                      EmailTemplateType templateType) {
+
+        log.info("Sending email by template - Cycle: {}, Template: {}", cycleType, templateType);
+
+        Emailer emailer = emailerRepository
+                .findByCycleTypeAndTemplateTypeAndStatus(
+                        cycleType,
+                        templateType,
+                        EmailerStatus.ACTIVE)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Email template not found for cycle=" + cycleType +
+                                        ", template=" + templateType));
+
+        int emailsSent = sendEmailToEmployees(emailer, cycleType);
+
+        return String.format("Email sent successfully to %d employees.", emailsSent);
+    }
+
+    private int sendEmailToEmployees(Emailer emailer, CycleType cycleType) {
+
+        log.info("Fetching employees from API: {}", employeeApiUrl);
+
+        EmployeeDto[] employees;
+        try {
+            employees = restTemplate.getForObject(employeeApiUrl, EmployeeDto[].class);
+            log.info("Fetched {} employees from API", employees != null ? employees.length : 0);
+        } catch (RestClientException e) {
+            log.error("Failed to fetch employees from API: {}", employeeApiUrl, e);
+            throw new RuntimeException("Failed to fetch employees list", e);
         }
 
-        List<EmployeeDto> employees = Arrays.asList(employeesArray);
+        if (employees == null || employees.length == 0) {
+            log.warn("No employees found to send emails");
+            return 0;
+        }
+
+        String templateName = getTemplateName(emailer.getTemplateType());
+        log.info("Using template: {}", templateName);
+
+        int successCount = 0;
+        int failureCount = 0;
 
         for (EmployeeDto employee : employees) {
 
-            if (employee.getEmpEmailId() == null ||
-                    employee.getEmpEmailId().trim().isEmpty()) {
+            if (employee.getEmpEmailId() == null || employee.getEmpEmailId().isBlank()) {
+                log.warn("Skipping employee {} - no email address", employee.getEmpName());
                 continue;
             }
 
-            String employeeName =
-                    employee.getEmpName() != null
-                            ? employee.getEmpName()
-                            : "Employee";
+            try {
+                Context context = new Context();
+                context.setVariable("employeeName",
+                        employee.getEmpName() != null ? employee.getEmpName() : "Employee");
+                context.setVariable("subject", emailer.getSubject());
+                context.setVariable("cycleType", cycleType.toString());
+                context.setVariable("content", emailer.getContent().replace("\n", "<br>"));
 
-            String reminderContent =
-                    emailer.getContent() +
-                            "\n\nReminder: This performance cycle is still ACTIVE. Please complete before expiry.";
+                String htmlContent = templateEngine.process(templateName, context);
 
-            Context context = new Context();
-            context.setVariable("employeeName", employeeName);
-            context.setVariable("subject", "Reminder - " + emailer.getSubject());
-            context.setVariable("cycleType", cycleType.toString());
-            context.setVariable("content", reminderContent.replace("\n", "<br>"));
+                sendHtmlEmail(employee.getEmpEmailId(), emailer.getSubject(), htmlContent);
 
-            String htmlTemplate =
-                    templateEngine.process("emailer-template", context);
+                log.info("Email sent successfully to: {}", employee.getEmpEmailId());
+                successCount++;
 
-            sendHtmlEmail(
-                    employee.getEmpEmailId(),
-                    "Reminder - " + emailer.getSubject(),
-                    htmlTemplate
-            );
+            } catch (Exception ex) {
+                log.error("Failed to send email to: {}", employee.getEmpEmailId(), ex);
+                failureCount++;
+            }
+        }
+
+        log.info("Email sending completed - Success: {}, Failed: {}", successCount, failureCount);
+        return successCount;
+    }
+
+    private void sendHtmlEmail(String toEmail, String subject, String htmlBody) {
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            mailSender.send(message);
+            log.debug("Email sent to: {}", toEmail);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send email to: " + toEmail, e);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.cdl.epms.service.services;
 
 import com.cdl.epms.common.enums.CycleType;
+import com.cdl.epms.common.enums.EmailTemplateType;
 import com.cdl.epms.dto.notifications.EmailerRequestDto;
 import com.cdl.epms.dto.notifications.EmailerResponseDto;
 
@@ -15,4 +16,8 @@ public interface EmailerService {
     String publishEmailer(CycleType cycleType);
 
     void sendReminderEmail(CycleType cycleType);
+
+    EmailerResponseDto previewEmailerByType(CycleType cycleType, EmailTemplateType templateType);
+
+    String sendEmailByTemplate(CycleType cycleType, EmailTemplateType templateType);
 }
