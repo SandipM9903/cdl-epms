@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+
+<div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+    <h2 style="color: #721c24; margin-top: 0;">Final Reminder: <span th:text="${cycleType}"></span> Cycle Expiring</h2>
+
+    <p>Hello <strong th:text="${employeeName}"></strong>,</p>
+
+    <p>The <strong th:text="${cycleType}"></strong> performance cycle will expire tomorrow.</p>
+
+    <div style="background-color: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+        <p th:utext="${content}" style="margin: 0;"></p>
+    </div>
+
+    <div style="background-color: #721c24; color: white; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;">
+        <p style="margin: 0; font-size: 18px; font-weight: bold;">
+            ⚠️ URGENT: Cycle ends tomorrow!
+        </p>
+    </div>
+
+    <h3 style="color: #721c24;">Immediate Manager Actions Required:</h3>
+    <ul style="color: #721c24;">
+        <li>Complete all pending team reviews</li>
+        <li>Submit final manager assessments</li>
+        <li>Ensure no team member has pending tasks</li>
+    </ul>
+
+    <div style="margin-top: 25px; text-align: center;">
+        <a href="#" style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Complete Now</a>
+    </div>
+
+    <p style="margin-top: 25px; font-size: 14px; color: #6c757d;">
+        Best regards,<br>
+        <strong>EPMS Team</strong>
+    </p>
+</div>
+</body>
+</html>

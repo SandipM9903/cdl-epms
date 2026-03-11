@@ -3,9 +3,7 @@ package com.cdl.epms.service.serviceImpl;
 import com.cdl.epms.common.enums.CycleType;
 import com.cdl.epms.common.enums.EmailTemplateType;
 import com.cdl.epms.common.enums.EmailerStatus;
-import com.cdl.epms.dto.notifications.EmailerRequestDto;
-import com.cdl.epms.dto.notifications.EmailerResponseDto;
-import com.cdl.epms.dto.notifications.EmployeeDto;
+import com.cdl.epms.dto.notifications.*;
 import com.cdl.epms.exception.ConflictException;
 import com.cdl.epms.exception.ResourceNotFoundException;
 import com.cdl.epms.exception.ValidationException;
@@ -27,7 +25,9 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,22 +62,24 @@ public class EmailerServiceImpl implements EmailerService {
                                 ", status=" + status));
     }
 
-    private String getTemplateName(EmailTemplateType templateType) {
+    private String getTemplateName(EmailTemplateType templateType, boolean isManager) {
+        String baseTemplate;
 
         switch (templateType) {
-
             case LAUNCH:
-                return "launch-email-template";
-
+                baseTemplate = "launch-email-template";
+                break;
             case REMINDER:
-                return "reminder-email-template";
-
+                baseTemplate = "reminder-email-template";
+                break;
             case EXPIRY:
-                return "expiry-email-template";
-
+                baseTemplate = "expiry-email-template";
+                break;
             default:
                 throw new ValidationException("Invalid template type");
         }
+
+        return isManager ? "manager-" + baseTemplate : baseTemplate;
     }
 
     @Override
@@ -165,16 +167,32 @@ public class EmailerServiceImpl implements EmailerService {
                 EmailerStatus.NOT_STARTED);
 
         try {
-            // Send emails to employees
-            int emailsSent = sendEmailToEmployees(emailer, cycleType);
+            // Fetch employees and categorize them
+            List<EmployeeDto> allEmployees = fetchEmployees();
+            List<EmployeeDto> managers = identifyManagers(allEmployees);
+            List<EmployeeDto> nonManagers = identifyNonManagers(allEmployees, managers);
+
+            log.info("Identified {} managers and {} non-managers out of {} total employees",
+                    managers.size(), nonManagers.size(), allEmployees.size());
+
+            // Send emails based on roles
+            EmailSendResult result = sendRoleBasedEmails(EmailSendRequest.builder()
+                    .cycleType(cycleType)
+                    .templateType(EmailTemplateType.LAUNCH)
+                    .employees(nonManagers)
+                    .managers(managers)
+                    .subject(emailer.getSubject())
+                    .content(emailer.getContent())
+                    .deadline(LocalDateTime.now().plusDays(30).toLocalDate()) // You can fetch this from cycle
+                    .build());
 
             // Update emailer status
             emailer.setStatus(EmailerStatus.ACTIVE);
             emailer.setActiveAt(LocalDateTime.now());
             emailerRepository.save(emailer);
 
-            log.info("Successfully sent {} launch emails for cycle: {}", emailsSent, cycleType);
-            return String.format("Launch email sent successfully to %d employees.", emailsSent);
+            log.info("Successfully sent launch emails for cycle: {}. Result: {}", cycleType, result.getSummary());
+            return String.format("Launch emails sent successfully. %s", result.getSummary());
 
         } catch (Exception e) {
             log.error("Failed to send launch emails for cycle: {}", cycleType, e);
@@ -192,7 +210,21 @@ public class EmailerServiceImpl implements EmailerService {
                 EmailTemplateType.REMINDER,
                 EmailerStatus.ACTIVE);
 
-        sendEmailToEmployees(emailer, cycleType);
+        // Fetch employees and send reminder emails
+        List<EmployeeDto> allEmployees = fetchEmployees();
+        List<EmployeeDto> managers = identifyManagers(allEmployees);
+        List<EmployeeDto> nonManagers = identifyNonManagers(allEmployees, managers);
+
+        sendRoleBasedEmails(EmailSendRequest.builder()
+                .cycleType(cycleType)
+                .templateType(EmailTemplateType.REMINDER)
+                .employees(nonManagers)
+                .managers(managers)
+                .subject(emailer.getSubject())
+                .content(emailer.getContent())
+                .deadline(LocalDateTime.now().plusDays(7).toLocalDate())
+                .pendingTeamMembers(calculatePendingTeamMembers(managers))
+                .build());
     }
 
     @Override
@@ -228,65 +260,179 @@ public class EmailerServiceImpl implements EmailerService {
                                 "Email template not found for cycle=" + cycleType +
                                         ", template=" + templateType));
 
-        int emailsSent = sendEmailToEmployees(emailer, cycleType);
+        // Fetch employees and send emails
+        List<EmployeeDto> allEmployees = fetchEmployees();
+        List<EmployeeDto> managers = identifyManagers(allEmployees);
+        List<EmployeeDto> nonManagers = identifyNonManagers(allEmployees, managers);
 
-        return String.format("Email sent successfully to %d employees.", emailsSent);
+        EmailSendResult result = sendRoleBasedEmails(EmailSendRequest.builder()
+                .cycleType(cycleType)
+                .templateType(templateType)
+                .employees(nonManagers)
+                .managers(managers)
+                .subject(emailer.getSubject())
+                .content(emailer.getContent())
+                .deadline(LocalDateTime.now().plusDays(7).toLocalDate())
+                .build());
+
+        return String.format("Email sent successfully. %s", result.getSummary());
     }
 
-    private int sendEmailToEmployees(Emailer emailer, CycleType cycleType) {
+    @Override
+    public EmailSendResult sendRoleBasedEmails(EmailSendRequest request) {
 
+        log.info("Sending role-based emails - Type: {}, Employees: {}, Managers: {}",
+                request.getTemplateType(),
+                request.getEmployees() != null ? request.getEmployees().size() : 0,
+                request.getManagers() != null ? request.getManagers().size() : 0);
+
+        int employeeEmailsSent = 0;
+        int managerEmailsSent = 0;
+        int failedEmails = 0;
+
+        // Find employees who are both employee and manager - FIXED: use collect instead of forEach
+        Set<String> managerEmails = request.getManagers() != null ?
+                request.getManagers().stream()
+                        .map(EmployeeDto::getEmpEmailId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet()) :
+                new HashSet<>();
+
+        // Send employee emails to non-managers
+        if (request.getEmployees() != null) {
+            for (EmployeeDto employee : request.getEmployees()) {
+                if (employee.getEmpEmailId() == null || employee.getEmpEmailId().isBlank()) {
+                    continue;
+                }
+
+                try {
+                    // If this employee is also a manager, they'll get manager email separately
+                    if (!managerEmails.contains(employee.getEmpEmailId())) {
+                        sendSingleEmail(employee, request, false);
+                        employeeEmailsSent++;
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to send employee email to: {}", employee.getEmpEmailId(), e);
+                    failedEmails++;
+                }
+            }
+        }
+
+        // Send manager emails
+        if (request.getManagers() != null) {
+            for (EmployeeDto manager : request.getManagers()) {
+                if (manager.getEmpEmailId() == null || manager.getEmpEmailId().isBlank()) {
+                    continue;
+                }
+
+                try {
+                    sendSingleEmail(manager, request, true);
+                    managerEmailsSent++;
+                } catch (Exception e) {
+                    log.error("Failed to send manager email to: {}", manager.getEmpEmailId(), e);
+                    failedEmails++;
+                }
+            }
+        }
+
+        int totalEmailsSent = employeeEmailsSent + managerEmailsSent;
+
+        EmailSendResult result = EmailSendResult.builder()
+                .totalEmployees(request.getEmployees() != null ? request.getEmployees().size() : 0)
+                .totalManagers(request.getManagers() != null ? request.getManagers().size() : 0)
+                .employeesWithBothRoles(managerEmails.size())
+                .employeeEmailsSent(employeeEmailsSent)
+                .managerEmailsSent(managerEmailsSent)
+                .totalEmailsSent(totalEmailsSent)
+                .failedEmails(failedEmails)
+                .build();
+
+        log.info("Role-based email sending completed: {}", result.getSummary());
+        return result;
+    }
+
+    private void sendSingleEmail(EmployeeDto recipient, EmailSendRequest request, boolean isManager) {
+
+        String templateName = getTemplateName(request.getTemplateType(), isManager);
+
+        Context context = new Context();
+        context.setVariable("employeeName", recipient.getEmpName() != null ? recipient.getEmpName() : "Employee");
+        context.setVariable("subject", request.getSubject());
+        context.setVariable("cycleType", request.getCycleType().toString());
+        context.setVariable("content", request.getContent().replace("\n", "<br>"));
+
+        if (request.getDeadline() != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+            context.setVariable("deadline", request.getDeadline().format(formatter));
+        }
+
+        if (isManager && request.getPendingTeamMembers() != null) {
+            context.setVariable("pendingTeamMembers", request.getPendingTeamMembers());
+        }
+
+        String htmlContent = templateEngine.process(templateName, context);
+
+        sendHtmlEmail(recipient.getEmpEmailId(), request.getSubject(), htmlContent);
+
+        log.debug("Sent {} email to: {}", isManager ? "manager" : "employee", recipient.getEmpEmailId());
+    }
+
+    private List<EmployeeDto> fetchEmployees() {
         log.info("Fetching employees from API: {}", employeeApiUrl);
 
-        EmployeeDto[] employees;
         try {
-            employees = restTemplate.getForObject(employeeApiUrl, EmployeeDto[].class);
+            EmployeeDto[] employees = restTemplate.getForObject(employeeApiUrl, EmployeeDto[].class);
             log.info("Fetched {} employees from API", employees != null ? employees.length : 0);
+
+            if (employees == null) {
+                return new ArrayList<>();
+            }
+
+            return Arrays.asList(employees);
+
         } catch (RestClientException e) {
             log.error("Failed to fetch employees from API: {}", employeeApiUrl, e);
             throw new RuntimeException("Failed to fetch employees list", e);
         }
+    }
 
-        if (employees == null || employees.length == 0) {
-            log.warn("No employees found to send emails");
-            return 0;
+    private List<EmployeeDto> identifyManagers(List<EmployeeDto> allEmployees) {
+        if (allEmployees == null || allEmployees.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        String templateName = getTemplateName(emailer.getTemplateType());
-        log.info("Using template: {}", templateName);
+        // A manager is someone who has at least one reportee
+        // We can identify this by checking if their email appears as reportingManagerEmailId for any employee
+        Set<String> managerEmails = allEmployees.stream()
+                .map(EmployeeDto::getReportingManagerEmailId)
+                .filter(Objects::nonNull)
+                .filter(email -> !email.isBlank())
+                .collect(Collectors.toSet());
 
-        int successCount = 0;
-        int failureCount = 0;
+        return allEmployees.stream()
+                .filter(emp -> managerEmails.contains(emp.getEmpEmailId()))
+                .collect(Collectors.toList());
+    }
 
-        for (EmployeeDto employee : employees) {
-
-            if (employee.getEmpEmailId() == null || employee.getEmpEmailId().isBlank()) {
-                log.warn("Skipping employee {} - no email address", employee.getEmpName());
-                continue;
-            }
-
-            try {
-                Context context = new Context();
-                context.setVariable("employeeName",
-                        employee.getEmpName() != null ? employee.getEmpName() : "Employee");
-                context.setVariable("subject", emailer.getSubject());
-                context.setVariable("cycleType", cycleType.toString());
-                context.setVariable("content", emailer.getContent().replace("\n", "<br>"));
-
-                String htmlContent = templateEngine.process(templateName, context);
-
-                sendHtmlEmail(employee.getEmpEmailId(), emailer.getSubject(), htmlContent);
-
-                log.info("Email sent successfully to: {}", employee.getEmpEmailId());
-                successCount++;
-
-            } catch (Exception ex) {
-                log.error("Failed to send email to: {}", employee.getEmpEmailId(), ex);
-                failureCount++;
-            }
+    private List<EmployeeDto> identifyNonManagers(List<EmployeeDto> allEmployees, List<EmployeeDto> managers) {
+        if (allEmployees == null || allEmployees.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        log.info("Email sending completed - Success: {}, Failed: {}", successCount, failureCount);
-        return successCount;
+        Set<String> managerEmails = managers.stream()
+                .map(EmployeeDto::getEmpEmailId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        return allEmployees.stream()
+                .filter(emp -> !managerEmails.contains(emp.getEmpEmailId()))
+                .collect(Collectors.toList());
+    }
+
+    private Integer calculatePendingTeamMembers(List<EmployeeDto> managers) {
+        // This is a placeholder - implement actual logic to count pending reviews
+        // You might want to fetch this from a database
+        return 5; // Default value
     }
 
     private void sendHtmlEmail(String toEmail, String subject, String htmlBody) {

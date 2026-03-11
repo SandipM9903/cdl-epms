@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+
+<div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+    <h2 style="color: #856404; margin-top: 0;">Reminder: <span th:text="${cycleType}"></span> Performance Cycle</h2>
+
+    <p>Hello <strong th:text="${employeeName}"></strong>,</p>
+
+    <p>This is a reminder that the <strong th:text="${cycleType}"></strong> performance cycle is in progress.</p>
+
+    <div style="background-color: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+        <p th:utext="${content}" style="margin: 0;"></p>
+    </div>
+
+    <h3 style="color: #856404;">Pending Manager Tasks:</h3>
+    <ul style="color: #856404;">
+        <li>Review team member goals</li>
+        <li>Provide feedback on completed reviews</li>
+        <li>Complete manager assessments for your team</li>
+    </ul>
+
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 20px;">
+        <p style="margin: 0; font-size: 14px;">
+            <strong>Deadline:</strong> <span th:text="${deadline}"></span><br>
+            <strong>Team Members Pending:</strong> <span th:text="${pendingTeamMembers}">0</span>
+        </p>
+    </div>
+
+    <div style="margin-top: 25px; text-align: center;">
+        <a href="#" style="background-color: #ffc107; color: #856404; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Complete Manager Tasks</a>
+    </div>
+
+    <p style="margin-top: 25px; font-size: 14px; color: #6c757d;">
+        Best regards,<br>
+        <strong>EPMS Team</strong>
+    </p>
+</div>
+</body>
+</html>
