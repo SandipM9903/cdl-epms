@@ -8,12 +8,12 @@ import com.cdl.epms.model.PerformanceCycle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+@Repository
 public interface GoalRepository extends JpaRepository<Goal, Long> {
-
-    // ================= PREDEFINED =================
 
     List<Goal> findByEmployeeIdAndPerformanceCycleAndQuarter(
             String employeeId,
@@ -51,7 +51,27 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
             GoalType goalType
     );
 
-    // ================= DEVELOPMENT GOALS =================
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndGoalType(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            GoalType goalType
+    );
+
+    List<Goal> findByManagerIdAndEmployeeIdAndQuarterAndYearAndGoalType(
+            String managerId,
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            GoalType goalType
+    );
+
+    long countByEmployeeIdAndQuarterAndYearAndGoalType(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            GoalType goalType
+    );
 
     List<Goal> findByEmployeeIdAndPerformanceCycleAndQuarterAndGoalTypeAndStatus(
             String employeeId,
@@ -89,11 +109,7 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
             GoalStatus status
     );
 
-    // ================= ANNUAL REVIEW =================
-
     List<Goal> findByEmployeeIdAndPerformanceCycle_Year(String employeeId, Integer year);
-
-    // ================= REPORTS =================
 
     List<Goal> findByGoalType(GoalType goalType);
 
@@ -104,8 +120,6 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByQuarterAndPerformanceCycle_Year(Quarter quarter, Integer year);
 
     List<Goal> findByPerformanceCycle_Year(Integer year);
-
-    // ================= HR DASHBOARD / PROGRESS =================
 
     long countByQuarterAndStatus(Quarter quarter, GoalStatus status);
 
@@ -119,4 +133,16 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     @Query("SELECT COUNT(DISTINCT g.employeeId) FROM Goal g WHERE g.quarter = :quarter")
     long countDistinctEmployeesByQuarter(@Param("quarter") Quarter quarter);
 
+    boolean existsByEmployeeIdAndPerformanceCycleAndQuarterAndTitle(
+            String employeeId,
+            PerformanceCycle cycle,
+            Quarter quarter,
+            String title);
+
+    boolean existsByEmployeeIdAndQuarterAndYearAndTitle(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            String title
+    );
 }

@@ -8,6 +8,9 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Entity
 @Table(name = "goal")
@@ -25,6 +28,10 @@ public class Goal {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cycle_id", nullable = false)
     private PerformanceCycle performanceCycle;
+
+    @NotNull(message = "Year cannot be null.")
+    @Column(name = "year", nullable = false)
+    private Integer year;
 
     @NotNull(message = "Quarter cannot be null.")
     @Enumerated(EnumType.STRING)
@@ -52,10 +59,9 @@ public class Goal {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @NotNull(message = "Weightage cannot be null.")
-    @Min(value = 1, message = "Weightage must be at least 1.")
+    @Min(value = 0, message = "Weightage must be at least 0.")
     @Max(value = 100, message = "Weightage cannot be more than 100.")
-    @Column(name = "weightage", nullable = false)
+    @Column(name = "weightage", nullable = true)  // Change to nullable = true
     private Integer weightage;
 
     @NotNull(message = "Goal status cannot be null.")
@@ -87,6 +93,33 @@ public class Goal {
         }
         if (this.status == null) {
             this.status = GoalStatus.NOT_STARTED;
+        }
+        if (this.year == null && this.performanceCycle != null) {
+            this.year = this.performanceCycle.getYear();
+        }
+    }
+
+    @Column(name = "goal_description", columnDefinition = "TEXT")
+    private String goalDescription;
+
+    @Column(name = "target_kpi", columnDefinition = "TEXT")
+    private String targetKPI;
+
+    @Column(name = "timeline", columnDefinition = "TEXT")
+    private String timeline;
+
+    public List<String> getTimelineAsList() {
+        if (this.timeline == null || this.timeline.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.asList(this.timeline.split(","));
+    }
+
+    public void setTimelineFromList(List<String> timelineList) {
+        if (timelineList == null || timelineList.isEmpty()) {
+            this.timeline = null;
+        } else {
+            this.timeline = String.join(",", timelineList);
         }
     }
 }
