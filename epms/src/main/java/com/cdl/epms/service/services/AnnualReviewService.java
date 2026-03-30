@@ -1,20 +1,22 @@
 package com.cdl.epms.service.services;
 
 import com.cdl.epms.dto.annualReview.AnnualReviewRequestDto;
-import com.cdl.epms.model.AnnualReview;
-import com.cdl.epms.model.Goal;
-
-import java.util.List;
+import com.cdl.epms.dto.annualReview.HrSubmissionDto;
+import com.cdl.epms.dto.annualReview.UpdateAnnualReviewDto;
 
 public interface AnnualReviewService {
-
-    List<Goal> getAnnualGoals(String employeeId, Integer year);
-
-    AnnualReview submitSelfReview(String employeeId, AnnualReviewRequestDto dto);
-
-    AnnualReview updateManagerReview(String managerId, String employeeId, Integer year, Integer rating, String comment);
-
-    void submitToEmployee(String managerId, String employeeId, Integer year);
-
-    void finalSubmitToHR(String employeeId, Integer year);
+    void saveDraft(AnnualReviewRequestDto dto);
+    void submitReview(AnnualReviewRequestDto dto);
+    void saveManagerDraft(UpdateAnnualReviewDto dto);
+    void submitToEmployee(UpdateAnnualReviewDto dto);
+    Object updateManagerReview(UpdateAnnualReviewDto dto);
+    void submitToHr(HrSubmissionDto dto);
+    Object getHrReviews(Integer year);
+    Object getHrReviewDetails(Long reviewId);
+    void hrApproveOrReject(Long reviewId, Boolean approved, String hrRemarks);
+    void sendBackToR1(Long reviewId, String remarks, Boolean discussedWithR1);
+    Object getDraft(String employeeId, Integer year);
+    Object getFullReview(String employeeId, Integer year);
+    Object getManagerReview(String employeeId, Integer year);
+    Object getManagerDraft(Long reviewId);
 }

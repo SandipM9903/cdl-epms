@@ -1,9 +1,7 @@
 package com.cdl.epms.service.serviceImpl;
 
 import com.cdl.epms.common.enums.*;
-import com.cdl.epms.dto.goal.AssignPredefinedGoalsRequestDto;
-import com.cdl.epms.dto.goal.GoalResponseDto;
-import com.cdl.epms.dto.goal.UpdatePredefinedGoalsRequestDto;
+import com.cdl.epms.dto.goal.*;
 import com.cdl.epms.exception.ConflictException;
 import com.cdl.epms.exception.ResourceNotFoundException;
 import com.cdl.epms.exception.ValidationException;
@@ -14,6 +12,7 @@ import com.cdl.epms.repository.GoalMasterRepository;
 import com.cdl.epms.repository.GoalRepository;
 import com.cdl.epms.repository.PerformanceCycleRepository;
 import com.cdl.epms.service.services.GoalService;
+import com.cdl.epms.util.GoalCategoryUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -23,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -93,11 +93,11 @@ public class GoalServiceImpl implements GoalService {
     @Override
     public List<GoalResponseDto> getPredefinedGoalsByEmployee(String employeeId, Quarter quarter, Integer year) {
 
-        List<Goal> goals = goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalType(
+        List<Goal> goals = goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalTypeIn(
                 employeeId,
                 quarter,
                 year,
-                GoalType.PREDEFINED
+                List.of(GoalType.PREDEFINED, GoalType.SMART)
         );
 
         return goals.stream()
@@ -178,6 +178,77 @@ public class GoalServiceImpl implements GoalService {
 
     @Override
     public Goal saveSmartGoal(Goal goal, Quarter quarter) {
+        try {
+            PerformanceCycle activeCycle = getActiveCycle();
+
+            log.info("=== SAVE SMART GOAL START ===");
+            log.info("EmployeeId: {}", goal.getEmployeeId());
+            log.info("ManagerId: {}", goal.getManagerId());
+            log.info("Title: {}", goal.getTitle());
+            log.info("Quarter: {}", quarter);
+
+            if (quarter == null) {
+                throw new ValidationException("Quarter is required");
+            }
+
+            if (goal == null) {
+                throw new ValidationException("Goal data is required");
+            }
+
+            if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
+                throw new ValidationException("Employee ID is required");
+            }
+
+            if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
+                throw new ValidationException("Goal title is required");
+            }
+
+            if (goal.getWeightage() == null) {
+                goal.setWeightage(0);
+            }
+
+            long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                    goal.getEmployeeId(),
+                    activeCycle,
+                    quarter,
+                    GoalType.SMART
+            );
+
+            if (count >= 5) {
+                throw new ConflictException("Maximum 5 SMART goals allowed");
+            }
+
+            Goal newGoal = new Goal();
+            newGoal.setPerformanceCycle(activeCycle);
+            newGoal.setYear(activeCycle.getYear());
+            newGoal.setQuarter(quarter);
+            newGoal.setEmployeeId(goal.getEmployeeId());
+            newGoal.setManagerId(goal.getManagerId());
+            newGoal.setGoalType(GoalType.SMART);
+            newGoal.setTitle(goal.getTitle());
+            newGoal.setGoalDescription(goal.getGoalDescription());
+            newGoal.setTargetKPI(goal.getTargetKPI());
+            newGoal.setWeightage(goal.getWeightage());
+            newGoal.setAchievableTarget(goal.getAchievableTarget());
+            newGoal.setSelfReviewComments(goal.getSelfReviewComments());
+            newGoal.setCreatedAt(LocalDateTime.now());
+            newGoal.setStatus(GoalStatus.SELF_REVIEWED);
+
+            log.info("Attempting to save SMART goal with ManagerId: {}", newGoal.getManagerId());
+
+            Goal savedGoal = goalRepository.save(newGoal);
+            log.info("SMART goal saved successfully with ID: {}", savedGoal.getId());
+            return savedGoal;
+
+        } catch (Exception e) {
+            log.error("ERROR in saveSmartGoal: ", e);
+            throw new RuntimeException("Failed to save SMART goal: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public Goal saveSmartGoalWithSelfReview(Goal goal, Quarter quarter, Integer overallRating, String overallComment) {
         PerformanceCycle activeCycle = getActiveCycle();
 
         if (quarter == null) {
@@ -196,10 +267,7 @@ public class GoalServiceImpl implements GoalService {
             throw new ValidationException("Goal title is required");
         }
 
-        if (goal.getWeightage() == null || goal.getWeightage() <= 0) {
-            throw new ValidationException("Weightage must be greater than 0");
-        }
-
+        // Check limit
         long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
                 goal.getEmployeeId(),
                 activeCycle,
@@ -211,14 +279,29 @@ public class GoalServiceImpl implements GoalService {
             throw new ConflictException("Maximum 5 SMART goals allowed");
         }
 
-        Goal newGoal = modelMapper.map(goal, Goal.class);
+        // Create new Goal object (same table)
+        Goal newGoal = new Goal();
         newGoal.setPerformanceCycle(activeCycle);
         newGoal.setYear(activeCycle.getYear());
         newGoal.setQuarter(quarter);
+        newGoal.setEmployeeId(goal.getEmployeeId());
+        newGoal.setManagerId(goal.getManagerId());
         newGoal.setGoalType(GoalType.SMART);
-        newGoal.setStatus(GoalStatus.NOT_STARTED);
+        newGoal.setTitle(goal.getTitle());
+        newGoal.setGoalDescription(goal.getGoalDescription());
+        newGoal.setTargetKPI(goal.getTargetKPI());
+        newGoal.setWeightage(goal.getWeightage() != null ? goal.getWeightage() : 0);
+        newGoal.setAchievableTarget(goal.getAchievableTarget());
+        newGoal.setSelfReviewComments(goal.getSelfReviewComments());
+        newGoal.setCreatedAt(LocalDateTime.now());
+        newGoal.setSelfReviewSubmittedDate(LocalDateTime.now());
+        newGoal.setOverallSelfAssessmentRating(overallRating);
+        newGoal.setOverallSelfReviewComments(overallComment);
+        newGoal.setStatus(GoalStatus.SELF_REVIEWED);
 
-        return goalRepository.save(newGoal);
+        Goal savedGoal = goalRepository.save(newGoal);
+        log.info("SMART goal created with self-review, ID: {}, Title: {}", savedGoal.getId(), savedGoal.getTitle());
+        return savedGoal;
     }
 
     @Override
@@ -266,14 +349,6 @@ public class GoalServiceImpl implements GoalService {
 
         if (goals.size() > 5) {
             throw new ConflictException("Maximum 5 SMART goals allowed");
-        }
-
-        int totalWeightage = goals.stream()
-                .mapToInt(Goal::getWeightage)
-                .sum();
-
-        if (totalWeightage != 100) {
-            throw new ConflictException("Total weightage must be 100%");
         }
 
         for (Goal goal : goals) {
@@ -480,7 +555,7 @@ public class GoalServiceImpl implements GoalService {
                 employeeId,
                 activeCycle,
                 quarter,
-                List.of(GoalType.SMART, GoalType.DEVELOPMENT)
+                List.of(GoalType.PREDEFINED, GoalType.SMART, GoalType.DEVELOPMENT)
         );
 
         if (goals.isEmpty()) {
@@ -488,9 +563,6 @@ public class GoalServiceImpl implements GoalService {
         }
 
         for (Goal goal : goals) {
-            if (goal.getManagerRating() == null) {
-                throw new ValidationException("Manager rating is required before submission");
-            }
             goal.setStatus(GoalStatus.SENT_TO_EMPLOYEE);
             goal.setSubmittedToEmployeeAt(LocalDateTime.now());
         }
@@ -547,8 +619,11 @@ public class GoalServiceImpl implements GoalService {
             throw new ResourceNotFoundException("No goals found for acceptance");
         }
 
+        LocalDateTime now = LocalDateTime.now();
+
         for (Goal goal : goals) {
             goal.setStatus(GoalStatus.ACCEPTED_BY_EMPLOYEE);
+            goal.setSelfAcceptedDate(now);
         }
 
         goalRepository.saveAll(goals);
@@ -630,14 +705,11 @@ public class GoalServiceImpl implements GoalService {
                 goal.setYear(requestDto.getYear());
                 goal.setQuarter(requestDto.getQuarter());
                 goal.setEmployeeId(requestDto.getEmployeeId());
-                goal.setManagerId("MGR_" + requestDto.getEmployeeId());
+                goal.setManagerId(requestDto.getManagerId());
+                goal.setGoalCategory(goalMaster.getCategory());
                 goal.setGoalType(GoalType.PREDEFINED);
                 goal.setTitle(goalMaster.getDifferentiatorName());
                 goal.setDescription(goalMaster.getDefinition());
-
-                // REMOVE THIS LINE - Don't set weightage at creation
-                // goal.setWeightage(1);
-
                 goal.setStatus(GoalStatus.NOT_STARTED);
                 goal.setCreatedAt(LocalDateTime.now());
 
@@ -664,7 +736,6 @@ public class GoalServiceImpl implements GoalService {
         log.info("Updating predefined goals for employee: {}, quarter: {}, year: {}",
                 requestDto.getEmployeeId(), requestDto.getQuarter(), requestDto.getYear());
 
-        // Validate quarter
         Quarter quarterEnum;
         try {
             quarterEnum = Quarter.valueOf(requestDto.getQuarter());
@@ -678,7 +749,6 @@ public class GoalServiceImpl implements GoalService {
             Goal goal = goalRepository.findById(goalDto.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalDto.getId()));
 
-            // Verify this goal belongs to the correct employee/quarter/year
             if (!goal.getEmployeeId().equals(requestDto.getEmployeeId())) {
                 throw new ValidationException("Goal does not belong to this employee");
             }
@@ -689,12 +759,6 @@ public class GoalServiceImpl implements GoalService {
                 throw new ValidationException("Goal year mismatch");
             }
 
-            // Validate goal type is PREDEFINED
-            if (goal.getGoalType() != GoalType.PREDEFINED) {
-                throw new ValidationException("Only predefined goals can be updated through this endpoint");
-            }
-
-            // Update fields
             if (goalDto.getGoalDescription() != null) {
                 goal.setGoalDescription(goalDto.getGoalDescription());
             }
@@ -702,29 +766,36 @@ public class GoalServiceImpl implements GoalService {
                 goal.setTargetKPI(goalDto.getTargetKPI());
             }
             if (goalDto.getWeightage() != null) {
-                // Validate weightage range
                 if (goalDto.getWeightage() < 0 || goalDto.getWeightage() > 100) {
                     throw new ValidationException("Weightage must be between 0 and 100");
                 }
                 goal.setWeightage(goalDto.getWeightage());
             }
+            if (goalDto.getAchievableTarget() != null) {
+                goal.setAchievableTarget(goalDto.getAchievableTarget());
+            }
+            if (goalDto.getSelfReviewComments() != null) {
+                goal.setSelfReviewComments(goalDto.getSelfReviewComments());
+            }
 
-            // Handle timeline - convert List<String> to comma-separated String
             if (goalDto.getTimeline() != null) {
                 if (goalDto.getTimeline().isEmpty()) {
                     goal.setTimeline(null);
                 } else {
-                    // Validate timeline values
                     for (String q : goalDto.getTimeline()) {
                         if (!q.matches("Q[1-4]")) {
                             throw new ValidationException("Invalid quarter format: " + q + ". Must be Q1, Q2, Q3, or Q4");
                         }
                     }
-                    // Convert List to comma-separated String
                     String timelineString = String.join(",", goalDto.getTimeline());
                     goal.setTimeline(timelineString);
                 }
             }
+
+            if (requestDto.isSaveAsDraft()) {
+                goal.setStatus(GoalStatus.DRAFT);
+            }
+
             goal.setSubmittedToEmployeeAt(LocalDateTime.now());
             updatedGoals.add(goalRepository.save(goal));
         }
@@ -755,5 +826,476 @@ public class GoalServiceImpl implements GoalService {
         throw new ResourceNotFoundException("No cycles found in the system. Please create a cycle first.");
     }
 
+    @Override
+    @Transactional
+    public List<Goal> submitSelfReview(SelfReviewRequestDto requestDto) {
+        log.info("Submitting self-review for employee: {}, quarter: {}, year: {}",
+                requestDto.getEmployeeId(), requestDto.getQuarter(), requestDto.getYear());
 
+        Quarter quarterEnum;
+        try {
+            quarterEnum = Quarter.valueOf(requestDto.getQuarter());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Invalid quarter: " + requestDto.getQuarter());
+        }
+
+        if (requestDto.getGoals() == null || requestDto.getGoals().isEmpty()) {
+            throw new ValidationException("At least one goal must be provided");
+        }
+
+        List<Goal> updatedGoals = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (SelfReviewRequestDto.SelfReviewGoalDto goalDto : requestDto.getGoals()) {
+            Goal goal = goalRepository.findById(goalDto.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalDto.getId()));
+
+            log.info("Processing goal ID: {}, current status: {}", goal.getId(), goal.getStatus());
+
+            if (!requestDto.getEmployeeId().equals(goal.getEmployeeId())) {
+                throw new ValidationException("Goal does not belong to this employee");
+            }
+
+            if (!quarterEnum.equals(goal.getQuarter())) {
+                throw new ValidationException("Goal quarter mismatch");
+            }
+
+            if (!requestDto.getYear().equals(goal.getYear())) {
+                throw new ValidationException("Goal year mismatch");
+            }
+
+            if (goal.getStatus() != GoalStatus.SENT_TO_EMPLOYEE &&
+                    goal.getStatus() != GoalStatus.MANAGER_REVIEWED &&
+                    goal.getStatus() != GoalStatus.DRAFT) {
+                throw new ValidationException(
+                        "Goal is not eligible for self-review. Current status: " + goal.getStatus()
+                );
+            }
+
+            if (goalDto.getGoalDescription() != null) {
+                goal.setGoalDescription(goalDto.getGoalDescription());
+            }
+
+            if (goalDto.getTargetKPI() != null) {
+                goal.setTargetKPI(goalDto.getTargetKPI());
+            }
+
+            if (goalDto.getAchievableTarget() != null) {
+                goal.setAchievableTarget(goalDto.getAchievableTarget());
+            }
+
+            if (goalDto.getSelfReviewComments() != null) {
+                goal.setSelfReviewComments(goalDto.getSelfReviewComments());
+            }
+
+            goal.setSelfAssessmentRating(goalDto.getSelfAssessmentRating());
+
+            if (goal.getSelfAssessmentRating() != null &&
+                    (goal.getSelfAssessmentRating() < 1 || goal.getSelfAssessmentRating() > 5)) {
+                throw new ValidationException("Rating must be between 1 and 5");
+            }
+
+            if (goalDto.getOverallSelfAssessmentRating() != null) {
+                goal.setOverallSelfAssessmentRating(goalDto.getOverallSelfAssessmentRating());
+            }
+            if (goalDto.getOverallSelfReviewComments() != null) {
+                goal.setOverallSelfReviewComments(goalDto.getOverallSelfReviewComments());
+            }
+
+            goal.setSelfReviewSubmittedDate(now);
+            goal.setStatus(GoalStatus.SELF_REVIEWED);
+
+            updatedGoals.add(goalRepository.save(goal));
+        }
+
+        log.info("Successfully submitted self-review for {} goals", updatedGoals.size());
+        return updatedGoals;
+    }
+
+    @Override
+    public List<Goal> getGoalsPendingSelfReview(String employeeId, Quarter quarter, Integer year) {
+        log.info("Fetching goals pending self-review for employee: {}, quarter: {}, year: {}",
+                employeeId, quarter, year);
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+        if (year == null) {
+            throw new ValidationException("Year is required");
+        }
+
+        List<GoalStatus> eligibleStatuses = Arrays.asList(
+                GoalStatus.SENT_TO_EMPLOYEE,
+                GoalStatus.MANAGER_REVIEWED,
+                GoalStatus.DRAFT
+        );
+
+        List<Goal> pendingGoals = new ArrayList<>();
+
+        List<Goal> predefinedGoals = goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatusIn(
+                employeeId,
+                quarter,
+                year,
+                GoalType.PREDEFINED,
+                eligibleStatuses
+        );
+        pendingGoals.addAll(predefinedGoals);
+
+        List<Goal> smartGoals = goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatusIn(
+                employeeId,
+                quarter,
+                year,
+                GoalType.SMART,
+                eligibleStatuses
+        );
+        pendingGoals.addAll(smartGoals);
+
+        List<Goal> developmentGoals = goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatusIn(
+                employeeId,
+                quarter,
+                year,
+                GoalType.DEVELOPMENT,
+                eligibleStatuses
+        );
+        pendingGoals.addAll(developmentGoals);
+
+        log.info("Found {} goals pending self-review for employee {}", pendingGoals.size(), employeeId);
+        return pendingGoals;
+    }
+
+    @Override
+    @Transactional
+    public List<Goal> submitManagerReview(ManagerReviewRequestDto requestDto) {
+        log.info("Submitting manager review for employee: {}, quarter: {}, year: {}",
+                requestDto.getEmployeeId(), requestDto.getQuarter(), requestDto.getYear());
+
+        Quarter quarterEnum;
+        try {
+            quarterEnum = Quarter.valueOf(requestDto.getQuarter());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Invalid quarter: " + requestDto.getQuarter());
+        }
+
+        if (requestDto.getGoals() == null || requestDto.getGoals().isEmpty()) {
+            throw new ValidationException("At least one goal must be provided");
+        }
+
+        if (requestDto.getManagerOverallSelfAssessmentRating() != null &&
+                (requestDto.getManagerOverallSelfAssessmentRating() < 1 ||
+                        requestDto.getManagerOverallSelfAssessmentRating() > 5)) {
+            throw new ValidationException("Manager rating must be between 1 and 5");
+        }
+
+        List<Goal> updatedGoals = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        String category = GoalCategoryUtil.calculateCategory(
+                requestDto.getPotential(),
+                requestDto.getPerformance()
+        );
+
+        for (ManagerReviewRequestDto.ManagerReviewGoalDto goalDto : requestDto.getGoals()) {
+            Goal goal = goalRepository.findById(goalDto.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Goal not found with id: " + goalDto.getId()));
+
+            if (!requestDto.getManagerId().equals(goal.getManagerId())) {
+                throw new ValidationException("Goal does not belong to this manager");
+            }
+
+            if (!requestDto.getEmployeeId().equals(goal.getEmployeeId())) {
+                throw new ValidationException("Goal does not belong to this employee");
+            }
+
+            if (!quarterEnum.equals(goal.getQuarter())) {
+                throw new ValidationException("Goal quarter mismatch");
+            }
+
+            if (!requestDto.getYear().equals(goal.getYear())) {
+                throw new ValidationException("Goal year mismatch");
+            }
+
+            if (goal.getStatus() != GoalStatus.SUBMITTED_TO_MANAGER &&
+                    goal.getStatus() != GoalStatus.SELF_REVIEWED) {
+                throw new ValidationException(
+                        "Goal not eligible for manager review. Current status: " + goal.getStatus());
+            }
+
+            goal.setManagerOverallSelfAssessmentRating(
+                    requestDto.getManagerOverallSelfAssessmentRating());
+            goal.setManagerOverallSelfReviewComments(
+                    requestDto.getManagerOverallSelfReviewComments());
+            goal.setAchievementLevel(requestDto.getAchievementLevel());
+            goal.setPotential(requestDto.getPotential());
+            goal.setPerformance(requestDto.getPerformance());
+            goal.setTalentOrCriticalResource(requestDto.getTalentOrCriticalResource());
+            goal.setTalentMatrixCategory(category);
+            goal.setStatus(GoalStatus.MANAGER_REVIEWED);
+            goal.setReviewedAt(now);
+
+            updatedGoals.add(goalRepository.save(goal));
+        }
+
+        log.info("Successfully submitted manager review for {} goals", updatedGoals.size());
+        return updatedGoals;
+    }
+
+    @Override
+    @Transactional
+    public void selfAcceptGoals(String employeeId, Quarter quarter, Integer year) {
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (year == null) {
+            throw new ValidationException("Year is required");
+        }
+
+        List<GoalStatus> allowedStatuses = List.of(
+                GoalStatus.SENT_TO_EMPLOYEE,
+                GoalStatus.MANAGER_REVIEWED,
+                GoalStatus.SELF_REVIEWED
+        );
+
+        List<Goal> goals = goalRepository.findByEmployeeIdAndQuarterAndYearAndStatusIn(
+                employeeId,
+                quarter,
+                year,
+                allowedStatuses
+        );
+
+        if (goals.isEmpty()) {
+            throw new ResourceNotFoundException("No goals found for acceptance");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Goal goal : goals) {
+            goal.setStatus(GoalStatus.ACCEPTED_BY_EMPLOYEE);
+            goal.setSelfAcceptedDate(now);
+        }
+
+        goalRepository.saveAll(goals);
+    }
+
+    @Override
+    public void deleteGoals(List<Long> goalIds) {
+        if (goalIds == null || goalIds.isEmpty()) {
+            throw new ValidationException("Goal IDs are required");
+        }
+
+        List<Goal> goals = goalRepository.findAllById(goalIds);
+
+        if (goals.isEmpty()) {
+            throw new ResourceNotFoundException("No goals found");
+        }
+
+        goalRepository.deleteAll(goals);
+    }
+
+    @Override
+    @Transactional
+    public Goal updateSmartGoalDraft(Long goalId, Goal goal) {
+        log.info("Updating SMART goal draft with ID: {}", goalId);
+
+        if (goalId == null) {
+            throw new ValidationException("Goal ID is required");
+        }
+
+        Goal existingGoal = goalRepository.findById(goalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalId));
+
+        if (!existingGoal.getEmployeeId().equals(goal.getEmployeeId())) {
+            throw new ValidationException("Goal does not belong to this employee");
+        }
+
+        if (existingGoal.getGoalType() != GoalType.SMART) {
+            throw new ValidationException("Only SMART goals can be updated through this endpoint");
+        }
+
+        if (goal.getTitle() != null) {
+            existingGoal.setTitle(goal.getTitle());
+        }
+        if (goal.getGoalDescription() != null) {
+            existingGoal.setGoalDescription(goal.getGoalDescription());
+        }
+        if (goal.getTargetKPI() != null) {
+            existingGoal.setTargetKPI(goal.getTargetKPI());
+        }
+        if (goal.getWeightage() != null) {
+            existingGoal.setWeightage(goal.getWeightage());
+        }
+        if (goal.getAchievableTarget() != null) {
+            existingGoal.setAchievableTarget(goal.getAchievableTarget());
+        }
+        if (goal.getSelfReviewComments() != null) {
+            existingGoal.setSelfReviewComments(goal.getSelfReviewComments());
+        }
+
+        if (existingGoal.getStatus() != GoalStatus.DRAFT) {
+            existingGoal.setStatus(GoalStatus.DRAFT);
+        }
+
+        existingGoal.setCreatedAt(LocalDateTime.now());
+
+        Goal updatedGoal = goalRepository.save(existingGoal);
+        log.info("SMART goal draft updated successfully with ID: {}", updatedGoal.getId());
+        return updatedGoal;
+    }
+
+    @Override
+    @Transactional
+    public Goal submitSmartGoalDraft(Long goalId) {
+        log.info("Submitting SMART goal draft with ID: {}", goalId);
+
+        if (goalId == null) {
+            throw new ValidationException("Goal ID is required");
+        }
+
+        Goal goal = goalRepository.findById(goalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Goal not found with id: " + goalId));
+
+        if (goal.getGoalType() != GoalType.SMART) {
+            throw new ValidationException("Only SMART goals can be submitted");
+        }
+
+        if (goal.getStatus() != GoalStatus.DRAFT) {
+            throw new ValidationException("Only goals in DRAFT status can be submitted. Current status: " + goal.getStatus());
+        }
+
+        goal.setStatus(GoalStatus.SUBMITTED_TO_MANAGER);
+        goal.setCreatedAt(LocalDateTime.now());
+
+        Goal submittedGoal = goalRepository.save(goal);
+        log.info("SMART goal draft submitted successfully with ID: {}", submittedGoal.getId());
+        return submittedGoal;
+    }
+
+    @Override
+    public List<Goal> getDraftSmartGoalsByEmployee(String employeeId, Quarter quarter, Integer year) {
+        log.info("Fetching DRAFT SMART goals for employee: {}, quarter: {}, year: {}", employeeId, quarter, year);
+
+        if (employeeId == null || employeeId.trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+        if (year == null) {
+            throw new ValidationException("Year is required");
+        }
+
+        return goalRepository.findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatus(
+                employeeId,
+                quarter,
+                year,
+                GoalType.SMART,
+                GoalStatus.DRAFT
+        );
+    }
+
+    @Override
+    @Transactional
+    public Goal saveSmartGoalAndSubmitSelfReview(Goal goal, Quarter quarter, Integer overallRating, String overallComment) {
+        log.info("Saving SMART goal and submitting self-review for employee: {}", goal.getEmployeeId());
+
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
+
+        if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
+            throw new ValidationException("Goal title is required");
+        }
+
+        Goal newGoal = new Goal();
+        newGoal.setPerformanceCycle(activeCycle);
+        newGoal.setYear(activeCycle.getYear());
+        newGoal.setQuarter(quarter);
+        newGoal.setEmployeeId(goal.getEmployeeId());
+        newGoal.setManagerId(goal.getManagerId());
+        newGoal.setGoalType(GoalType.SMART);
+        newGoal.setTitle(goal.getTitle());
+        newGoal.setGoalDescription(goal.getGoalDescription());
+        newGoal.setTargetKPI(goal.getTargetKPI());
+        newGoal.setWeightage(goal.getWeightage() != null ? goal.getWeightage() : 0);
+        newGoal.setAchievableTarget(goal.getAchievableTarget());
+        newGoal.setSelfReviewComments(goal.getSelfReviewComments());
+        newGoal.setCreatedAt(LocalDateTime.now());
+        newGoal.setSelfReviewSubmittedDate(LocalDateTime.now());
+        newGoal.setOverallSelfAssessmentRating(overallRating);
+        newGoal.setOverallSelfReviewComments(overallComment);
+        newGoal.setStatus(GoalStatus.SELF_REVIEWED);
+
+        Goal savedGoal = goalRepository.save(newGoal);
+        log.info("SMART goal created with self-review, ID: {}", savedGoal.getId());
+        return savedGoal;
+    }
+
+    @Override
+    @Transactional
+    public Goal saveSmartGoalAsDraft(Goal goal, Quarter quarter) {
+        log.info("Saving SMART goal as DRAFT for employee: {}, quarter: {}", goal.getEmployeeId(), quarter);
+
+        PerformanceCycle activeCycle = getActiveCycle();
+
+        if (quarter == null) {
+            throw new ValidationException("Quarter is required");
+        }
+
+        if (goal.getEmployeeId() == null || goal.getEmployeeId().trim().isEmpty()) {
+            throw new ValidationException("Employee ID is required");
+        }
+
+        if (goal.getTitle() == null || goal.getTitle().trim().isEmpty()) {
+            throw new ValidationException("Goal title is required");
+        }
+
+        if (goal.getWeightage() == null) {
+            goal.setWeightage(0);
+        }
+
+        long count = goalRepository.countByEmployeeIdAndPerformanceCycleAndQuarterAndGoalType(
+                goal.getEmployeeId(),
+                activeCycle,
+                quarter,
+                GoalType.SMART
+        );
+
+        if (count >= 5) {
+            throw new ConflictException("Maximum 5 SMART goals allowed");
+        }
+
+        Goal newGoal = new Goal();
+        newGoal.setPerformanceCycle(activeCycle);
+        newGoal.setYear(activeCycle.getYear());
+        newGoal.setQuarter(quarter);
+        newGoal.setEmployeeId(goal.getEmployeeId());
+        newGoal.setManagerId(goal.getManagerId());
+        newGoal.setGoalType(GoalType.SMART);
+        newGoal.setTitle(goal.getTitle());
+        newGoal.setGoalDescription(goal.getGoalDescription());
+        newGoal.setTargetKPI(goal.getTargetKPI());
+        newGoal.setWeightage(goal.getWeightage());
+        newGoal.setAchievableTarget(goal.getAchievableTarget());
+        newGoal.setSelfReviewComments(goal.getSelfReviewComments());
+        newGoal.setCreatedAt(LocalDateTime.now());
+        newGoal.setStatus(GoalStatus.DRAFT);
+
+        Goal savedGoal = goalRepository.save(newGoal);
+        log.info("SMART goal saved as DRAFT with ID: {}", savedGoal.getId());
+        return savedGoal;
+    }
 }

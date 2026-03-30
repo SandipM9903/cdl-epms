@@ -163,4 +163,45 @@ public class CycleServiceImpl implements CycleService {
     public List<PerformanceCycle> getCyclesByYear(Integer year) {
         return cycleRepository.findByYear(year);
     }
+
+    @Override
+    public PerformanceCycle createAnnualCycle(
+            Integer year,
+            Integer reminderDays,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+
+        if (year == null) {
+            throw new ValidationException("Year is required");
+        }
+
+        if (startDate == null || endDate == null) {
+            throw new ValidationException("Start and End date required");
+        }
+
+        if (startDate.isAfter(endDate)) {
+            throw new ValidationException("Start date cannot be after end date");
+        }
+
+        // Optional: prevent duplicate annual
+        Optional<PerformanceCycle> existing =
+                cycleRepository.findByYearAndCycleType(year, CycleType.ANNUAL);
+
+        if (existing.isPresent()) {
+            throw new ConflictException("Annual cycle already exists for year " + year);
+        }
+
+        PerformanceCycle cycle = new PerformanceCycle();
+
+        cycle.setCycleType(CycleType.ANNUAL);
+        cycle.setYear(year);
+        cycle.setQuarter(null); // ✅ important
+        cycle.setReminderDays(reminderDays);
+        cycle.setStartDate(startDate);
+        cycle.setEndDate(endDate);
+        cycle.setStatus(CycleStatus.NOT_STARTED);
+
+        return cycleRepository.save(cycle);
+    }
 }

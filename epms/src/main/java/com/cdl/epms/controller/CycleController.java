@@ -100,4 +100,25 @@ public class CycleController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/annual")
+    public ResponseEntity<ApiResponse<PerformanceCycle>> createAnnualCycle(
+            @Valid @RequestBody CreateCycleRequestDto requestDto
+    ) {
+
+        PerformanceCycle savedCycle = cycleService.createAnnualCycle(
+                requestDto.getYear(),
+                requestDto.getReminderDays(),
+                requestDto.getStartDate(),
+                requestDto.getEndDate()
+        );
+
+        ApiResponse<PerformanceCycle> response = ApiResponse.<PerformanceCycle>builder()
+                .success(true)
+                .message("Annual cycle created successfully")
+                .data(savedCycle)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 }

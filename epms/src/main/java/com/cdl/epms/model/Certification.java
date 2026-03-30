@@ -16,18 +16,18 @@ public class Certification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull(message = "Annual Review ID cannot be null.")
+    @Column(name = "annual_review_id", nullable = false)
+    private Long annualReviewId;
+
     @NotBlank(message = "Certification name cannot be empty.")
-    @Column(name = "certification_name", nullable = false, unique = true)
-    private String certificationName;
+    @Column(name = "name", nullable = false)
+    private String name;
 
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
+    @NotBlank(message = "Certification type cannot be empty.")
+    @Column(name = "type", nullable = false)
+    private String type;
 
-    @NotNull(message = "Mandatory field cannot be null.")
-    @Column(name = "mandatory", nullable = false)
-    private Boolean mandatory = false;
-
-    @NotNull(message = "Active field cannot be null.")
-    @Column(name = "active", nullable = false)
-    private Boolean active = true;
+    @Column(name = "file_name")
+    private String fileName;
 }

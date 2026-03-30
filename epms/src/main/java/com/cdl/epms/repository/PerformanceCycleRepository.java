@@ -24,4 +24,6 @@ public interface PerformanceCycleRepository extends JpaRepository<PerformanceCyc
     );
 
     List<PerformanceCycle> findByYear(Integer year);
+
+    Optional<PerformanceCycle> findByYearAndCycleType(Integer year, CycleType cycleType);
 }

@@ -8,7 +8,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "annual_review")
+@Table(
+        name = "annual_review",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"employee_id", "year"})
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,52 +28,79 @@ public class AnnualReview {
     @Column(name = "employee_id", nullable = false)
     private String employeeId;
 
-    @NotBlank(message = "Manager ID cannot be empty.")
-    @Column(name = "manager_id", nullable = false)
+    @Column(name = "manager_id")
     private String managerId;
 
     @NotNull(message = "Year cannot be null.")
-    @Min(value = 2000, message = "Year must be a valid year.")
     @Column(name = "year", nullable = false)
     private Integer year;
 
-    @Min(value = 1, message = "Self rating must be at least 1.")
-    @Max(value = 5, message = "Self rating cannot be greater than 5.")
-    @Column(name = "self_rating")
-    private Integer selfRating;
-
-    @Column(name = "self_comment", columnDefinition = "TEXT")
-    private String selfComment;
-
-    @Min(value = 1, message = "Manager rating must be at least 1.")
-    @Max(value = 5, message = "Manager rating cannot be greater than 5.")
-    @Column(name = "manager_rating")
-    private Integer managerRating;
-
-    @Column(name = "manager_comment", columnDefinition = "TEXT")
-    private String managerComment;
-
-    @NotNull(message = "Annual review status cannot be null.")
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private AnnualReviewStatus status;
+    private AnnualReviewStatus status = AnnualReviewStatus.DRAFT;
+
+    // Manager Review fields
+    @Column(name = "nine_box_result", length = 50)
+    private String nineBoxResult;
+
+    @Column(name = "talent_flag")
+    private Boolean talentFlag;
+
+    @Column(name = "critical_flag")
+    private Boolean criticalFlag;
+
+    @Column(name = "manager_remarks", columnDefinition = "TEXT")
+    private String managerRemarks;
+
+    @Column(name = "manager_rating", length = 10)
+    private String managerRating;
+
+    @Column(name = "performance_rating", length = 10)
+    private String performanceRating;
+
+    @Column(name = "potential_rating", length = 10)
+    private String potentialRating;
+
+    // Employee HR Submission fields
+    @Column(name = "discussed_with_r1")
+    private Boolean discussedWithR1;
+
+    @Column(name = "employee_comment")
+    private Boolean employeeComment;
+
+    @Column(name = "employee_comment_text", columnDefinition = "TEXT")
+    private String employeeCommentText;
+
+    @Column(name = "submitted_to_hr_date")
+    private LocalDateTime submittedToHrDate;
+
+    @Column(name = "submitted_to_hr_by")
+    private String submittedToHrBy;
+
+    @Column(name = "hr_remarks", columnDefinition = "TEXT")
+    private String hrRemarks;
+
+    // Timestamps
+    @Column(name = "manager_annual_review_submission_date")
+    private LocalDateTime managerAnnualReviewSubmissionDate;
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
-    @Column(name = "manager_reviewed_at")
-    private LocalDateTime managerReviewedAt;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    @Column(name = "submitted_to_employee_at")
-    private LocalDateTime submittedToEmployeeAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @PrePersist
     public void onCreate() {
-        if (this.submittedAt == null) {
-            this.submittedAt = LocalDateTime.now();
-        }
-        if (this.status == null) {
-            this.status = AnnualReviewStatus.SELF_SUBMITTED;
-        }
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

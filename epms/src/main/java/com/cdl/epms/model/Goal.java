@@ -61,7 +61,7 @@ public class Goal {
 
     @Min(value = 0, message = "Weightage must be at least 0.")
     @Max(value = 100, message = "Weightage cannot be more than 100.")
-    @Column(name = "weightage", nullable = true)  // Change to nullable = true
+    @Column(name = "weightage", nullable = true)
     private Integer weightage;
 
     @NotNull(message = "Goal status cannot be null.")
@@ -83,8 +83,56 @@ public class Goal {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    @Column(name = "goal_category")
+    private String goalCategory;
+
     @Column(name = "submitted_to_employee_at")
     private LocalDateTime submittedToEmployeeAt;
+
+    // Self-Review Fields
+    @Column(name = "self_review", columnDefinition = "TEXT")
+    private String selfReview;
+
+    @Column(name = "self_review_submitted_date")
+    private LocalDateTime selfReviewSubmittedDate;
+
+    @Column(name = "achievable_target", columnDefinition = "TEXT")
+    private String achievableTarget;
+
+    @Min(value = 1, message = "Self assessment rating must be at least 1.")
+    @Max(value = 5, message = "Self assessment rating cannot be greater than 5.")
+    @Column(name = "self_assessment_rating")
+    private Integer selfAssessmentRating;
+
+    @Min(value = 1, message = "Self assessment rating must be at least 1.")
+    @Max(value = 5, message = "Self assessment rating cannot be greater than 5.")
+    @Column(name = "overall_self_assessment_rating")
+    private Integer overallSelfAssessmentRating;
+    @Column(name = "overall_self_review_comments", columnDefinition = "TEXT")
+    private String overallSelfReviewComments;
+
+    @Column(name = "self_review_comments", columnDefinition = "TEXT")
+    private String selfReviewComments;
+
+    @Min(value = 1, message = "Self assessment rating must be at least 1.")
+    @Max(value = 5, message = "Self assessment rating cannot be greater than 5.")
+    @Column(name = "manager_overall_self_assessment_rating")
+    private Integer managerOverallSelfAssessmentRating;
+    @Column(name = "manager_overall_self_review_comments", columnDefinition = "TEXT")
+    private String managerOverallSelfReviewComments;
+    @Column(name = "achievement_level", columnDefinition = "TEXT")
+    private String achievementLevel;
+    @Column(name = "potential", columnDefinition = "TEXT")
+    private String potential;
+    @Column(name = "performance", columnDefinition = "TEXT")
+    private String performance;
+    @Column(name = "talent_or_critical_resource", columnDefinition = "TEXT")
+    private String talentOrCriticalResource;
+    @Column(name = "talent_matrix_category", columnDefinition = "TEXT")
+    private String talentMatrixCategory;
+
+    @Column(name = "self_accecpted_date")
+    private LocalDateTime selfAcceptedDate;
 
     @PrePersist
     public void onCreate() {

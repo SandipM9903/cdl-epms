@@ -25,4 +25,11 @@ public interface CycleService {
     void closeCycle(Long cycleId);
 
     List<PerformanceCycle> getCyclesByYear(Integer year);
+
+    PerformanceCycle createAnnualCycle(
+            Integer year,
+            Integer reminderDays,
+            LocalDate startDate,
+            LocalDate endDate
+    );
 }

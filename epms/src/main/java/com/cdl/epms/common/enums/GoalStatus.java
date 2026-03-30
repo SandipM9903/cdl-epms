@@ -3,9 +3,11 @@ package com.cdl.epms.common.enums;
 public enum GoalStatus {
     NOT_STARTED,
     PREDEFINED_SUBMITTED,
+    DRAFT,
     SUBMITTED_TO_MANAGER,
     MANAGER_REVIEWED,
     SENT_TO_EMPLOYEE,
+    SELF_REVIEWED,
     ACCEPTED_BY_EMPLOYEE,
     FINAL_SUBMITTED_TO_HR
 }

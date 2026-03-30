@@ -58,6 +58,13 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
             GoalType goalType
     );
 
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndGoalTypeIn(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            List<GoalType> goalTypes
+    );
+
     List<Goal> findByManagerIdAndEmployeeIdAndQuarterAndYearAndGoalType(
             String managerId,
             String employeeId,
@@ -144,5 +151,34 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
             Quarter quarter,
             Integer year,
             String title
+    );
+
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatusIn(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            GoalType goalType,
+            List<GoalStatus> statuses
+    );
+
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndSelfReviewIsNotNull(
+            String employeeId,
+            Quarter quarter,
+            Integer year
+    );
+
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndStatusIn(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            List<GoalStatus> statuses
+    );
+
+    List<Goal> findByEmployeeIdAndQuarterAndYearAndGoalTypeAndStatus(
+            String employeeId,
+            Quarter quarter,
+            Integer year,
+            GoalType goalType,
+            GoalStatus status
     );
 }

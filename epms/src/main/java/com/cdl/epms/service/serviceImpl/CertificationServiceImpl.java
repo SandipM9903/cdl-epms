@@ -30,7 +30,7 @@ public class CertificationServiceImpl implements CertificationService {
             throw new ValidationException("Certification data is required");
         }
 
-        if (certification.getCertificationName() == null || certification.getCertificationName().trim().isEmpty()) {
+        if (certification.getName() == null || certification.getName().trim().isEmpty()) {
             throw new ValidationException("Certification name is required");
         }
 

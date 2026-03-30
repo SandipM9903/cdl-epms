@@ -101,8 +101,8 @@ public class ReportServiceImpl implements ReportService {
             dto.setEmployeeId(ec.getEmployeeId());
 
             if (ec.getCertification() != null) {
-                dto.setCertificationName(ec.getCertification().getCertificationName());
-                dto.setMandatory(ec.getCertification().getMandatory());
+//                dto.setCertificationName(ec.getCertification().getCertificationName());
+//                dto.setMandatory(ec.getCertification().getMandatory());
             }
 
             dto.setYear(ec.getYear());

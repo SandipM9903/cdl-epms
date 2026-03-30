@@ -10,17 +10,13 @@ import java.time.LocalDate;
 @Data
 public class CreateCycleRequestDto {
 
-    @NotNull
-    private CycleType cycleType;
+    private CycleType cycleType; // optional now
 
     @NotNull
     private Integer year;
 
-    // Nullable for ANNUAL
-    @NotNull
-    private Quarter quarter;
+    private Quarter quarter; // optional for annual
 
-    @NotNull
     private Integer reminderDays;
 
     @NotNull

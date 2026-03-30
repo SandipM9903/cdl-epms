@@ -13,6 +13,9 @@ public class AssignPredefinedGoalsRequestDto {
     @NotBlank(message = "Employee ID is required")
     private String employeeId;
 
+    @NotBlank(message = "Manager ID is required")
+    private String managerId;
+
     @NotNull(message = "Quarter is required")
     private Quarter quarter;
 
